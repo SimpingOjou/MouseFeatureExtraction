@@ -13,73 +13,22 @@ file_path = 'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Data';
 % input = dir([file_path,'\*.csv']);
 % tStrF = strfind(file_path,'\');
 
-[Corridor_Side] = table2array(readtable([file_path,'\',file_name_side]));
-[Corridor_Ventral] = table2array(readtable([file_path,'\',file_name_ventral]));
-
-if length(Corridor_Ventral) == length(Corridor_Side)
-    Frames = Corridor_Side(:,1);                     % extract frame column
-else
-    fprintf('WARNING: The two videos have different frame numbers!')
-end
-
-Sampling = 199;                           % frequency of acquisition
-Time = Frames * (1/Sampling);
-Likelihood = [Corridor_Side(:,4:3:end), Corridor_Ventral(:,4:3:end)]; % extract likelihood 
-
-%% calibration factor to transform pixels in centimeters 
+% constants
+Sampling = 199;   
+% calibration factor to transform pixels in centimeters 
 CF = 18.8; % change the calibration factor as needed 
 
-% markers name in the columns for the body: Head, Spine 1, Spine 2, Spine 3, Spine 4,Base
-x_body = -1 * Corridor_Side(:,[2, 5, 8, 11, 14, 17]) / CF; % extract x columns for body 
-y_body = -1 * Corridor_Side(:,[3, 6, 9, 12, 15, 18]) / CF; % extract y columns for body 
-
-% should there be a check on the first frame where I see if it's different
-% on the shared x axis?
-
-z_body = -1 * Corridor_Ventral(:,[3, 6, 9, 12, 15, 18]) / CF;
-
-%%% markers name in the columns for the forelimb: shoulder, elbow, wrist, lForepaw
-x_forelimb_L = -1 * Corridor_Side(:,[32, 35, 38, 41]) / CF;  % extract x columns for left forelimb
-y_forelimb_L = -1 * Corridor_Side(:,[33, 36, 39, 42]) / CF;  % extract y columns for left forelimb
-
-z_forelimb_L = -1 * Corridor_Ventral(:,33) / CF;
-
-%%% markers name in the columns for the hindlimb: hip, knee, anckle, lHindpaw, lHindfingers
-x_hindlimb_L = -1 * Corridor_Side(:,[44, 47, 50, 53, 56]) / CF;  % extract x columns for left hindlimb
-y_hindlimb_L = -1 * Corridor_Side(:,[45, 48, 51, 54, 57]) / CF;  % extract y columns for left hindlimb
-
-z_hindlimb_L = -1 * Corridor_Ventral(:,[39, 42]) / CF;
-
-%%% markers name in the columns for the tail: tail 25%, tail 50%, tail 75%, tail 100%. 
-x_tail = -1 * Corridor_Side(:,[17, 20, 23, 26, 29]) / CF; % extract x columns for tail, 
-y_tail = -1 * Corridor_Side(:,[18, 21, 24, 27, 30]) / CF; % extract y columns for tail
-
-z_tail = -1 * Corridor_Ventral(:,[18, 21, 24, 27, 30]) / CF;
+[Time, x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
+    z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
+    y_tail, z_tail] = Initialization(file_path, file_name_side,...
+    file_name_ventral, CF, Sampling);
       
 %% transformation of xyz axes to zero 
-arrays = {x_body, x_forelimb_L, x_hindlimb_L, x_tail, y_body, y_forelimb_L,...
-    y_hindlimb_L, y_tail, z_body, z_forelimb_L, z_hindlimb_L};  % Store arrays in a cell array
+arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
+    z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
+    y_tail, z_tail};  % Store arrays in a cell array
 
-for i = 1:numel(arrays)
-    min_value = min(min(arrays{i}));
 
-    % Subtract the minimum value from all elements
-    arrays{i} = arrays{i} - min_value;
-end
-
-% TODO: plot the arrays
-
-x_body = arrays{1};
-x_forelimb_L = arrays{2};
-x_hindlimb_L = arrays{3};
-x_tail = arrays{4};
-y_body = arrays{5};
-y_forelimb_L = arrays{6};
-y_hindlimb_L = arrays{7};
-y_tail = arrays{8};
-z_body = arrays{9};
-z_forelimb_L = arrays{10};
-z_hindlimb_L = arrays{11};
 
 %% mean speed of the body along the run
 
@@ -142,14 +91,12 @@ step_length = diff(step_x);
 step_speed = Speed_mean_fin(peak_amplitudes_pos(2:end,:));
 
 % 7) Endpoint path length 
+figure(1)
 findpeaks(y_hindlimb_paw_L,'MinPeakDistance',0.5,'MinPeakProminence',...
-    0.1, 'Annotate','extents','WidthReference','halfheight')
-xlabel('Frames (fps)')
-ylabel('Height (y)')
-title('Findpeak non inverted');
+    0.1, 'Annotate','extents','WidthReference','halfheight');
+
 % get border from plot
-Ax = gca;
-hlb = findobj(Ax,'Type','line', 'tag','Border');
+hlb = findobj(gca,'Type','line', 'tag','Border');
 borders = rmmissing(unique([hlb(1).XData; hlb(2).XData]));
 
 % TODO: divide per step
@@ -173,7 +120,7 @@ v_vector = [(x_hindlimb_paw_L(step_startpoints + 3) - ...
 v_orientation_rad = [atan2(v_vector(:,2), v_vector(:,1)),...
     atan2(v_vector(:,3), v_vector(:,2))]; % tg(y/x) & tg(z/y)
 v_orientation_deg = rad2deg(v_orientation_rad);
-v_vector_sd = std(v_orientation_deg);
+v_vector_sd = std(v_vector);
 
 % 9) Endpoint acceleration vector orientation at swing onset
 a_vector = [(x_hindlimb_paw_L(step_startpoints + 3) - ...
@@ -189,8 +136,8 @@ a_vector = [(x_hindlimb_paw_L(step_startpoints + 3) - ...
 a_orientation_rad = [atan2(a_vector(:,2), a_vector(:,1)),...
     atan2(a_vector(:,3), a_vector(:,2))];
 a_orientation_deg = rad2deg(a_orientation_rad);
-a_vector_sd = std(a_orientation_deg);
-
+a_vector_sd = std(a_vector);
+% TODO: rappresentazione a cerchhio dello step cycle xyt
 %       x          y        z
 % v_vector(inv) =
 %     7.2945    4.5018
@@ -220,7 +167,15 @@ a_vector_sd = std(a_orientation_deg);
 %     3.5833    0.6378   -0.1054
 %     2.5439    2.5385   -0.3730
 %     1.9492    2.9533    0.1292
-
+% v_orientation_deg(3D) =
+% 
+%    24.9188   78.8263
+%          0   90.0000
+%    28.2613   26.2273
+%     1.2863   77.0614
+%    10.0921   -9.3831
+%    44.9393   -8.3590
+%    56.5749    2.5042
 
 % a_vector(inv) =
 %    1.0e+03 *
@@ -243,21 +198,93 @@ a_vector_sd = std(a_orientation_deg);
 %   129.2952  195.8999    8.5675
 
 % 10) Max limb endpoint velocity
-%max_v = max(hypot(v_vector(1), v_vector(2))); % velocity over the direction
-velocity_over_time = hypot(diff(x_hindlimb_paw_L)./diff(Time), diff(y_hindlimb_paw_L)./diff(Time));
-max_v = max(velocity_over_time);
+% max_v = max(hypot(v_vector(1), v_vector(2))); % velocity over the direction
+velocity_paw_L = hypot3(diff(x_hindlimb_paw_L)./diff(Time),...
+    diff(y_hindlimb_paw_L)./diff(Time),...
+    diff(z_hindlimb_paw_L)./diff(Time));
+max_v = max(velocity_paw_L);
 % plot(Time(1:end-1),velocity_over_time);
+% plot(x_hindlimb_L',y_hindlimb_L') % remove outliers
 % max_v(inv) =
 % 
 %    41.2284
 % max_v(2D) =
 % 
 %   217.2496 % there are strange peaks
+% max_v(3D) =
+% 
+%   217.4858
 
-% TODO: differentiate step cycle in stance (touch down) and swing (lift off)
+ % figure(2)
+ % plot3(x_hindlimb_paw_L, y_hindlimb_paw_L, z_hindlimb_paw_L, 'LineWidth', 2);
+ % xlabel('x')
+ % ylabel('y')
+ % zlabel('z')
+
+% figure(3)
+% plot3(v_vector(1), v_vector(2), v_vector(3), 'LineWidth', 2)
+% xlabel('x')
+% ylabel('y')
+% zlabel('z')
+% 
+% figure(4)
+
+%% TODO: differentiate step cycle in stance (touch down) and swing (lift off)
 % IDEA: calculate border, then define touch down and lift off ass
 % parameters that are controlled by the proportion wrt peak-valley height
 % and define them on the time vector
+
+% TODO: appiattire il segnale e gestire paralitici
+
+[peaks, peaks_pos, peaks_width, peaks_prominence] = ...
+    findpeaks(y_hindlimb_paw_L,'MinPeakDistance',0.5,'MinPeakProminence',...
+    0.1, 'Annotate','extents','WidthReference','halfheight');
+
+steps = borders(1:end-1);
+valleys = y_hindlimb_paw_L(steps);
+proms = peaks - valleys; % not using the default one bc it's strange
+stance_threshold = 0.015 * proms; % by eye
+swing_threshold = 0.015 * proms;
+
+stances_start = [];
+swings_start = [];
+temp = peaks_pos(1);
+timesteps = 5; % change based on needs
+
+for i=1:length(steps)
+    for j=1:timesteps
+        diff = y_hindlimb_paw_L(steps(i) - j) - valleys(i);
+        if  diff > stance_threshold(i)
+            stances_start(end+1) = steps(i) - j;
+            break;
+        end
+    end
+end
+
+for i=1:length(steps)
+    for j=1:timesteps
+        diff = y_hindlimb_paw_L(steps(i) + j) - valleys(i);
+        if  diff > swing_threshold(i)
+            swings_start(end+1) = steps(i) + j;
+            break;
+        end
+    end
+end
+
+figure(2);
+plot(Frames(1:end-1),y_hindlimb_paw_L, 'LineWidth', 1.5);
+hold on;
+scatter(peaks_pos, peaks, 40, "x", 'LineWidth', 1);
+scatter(borders, y_hindlimb_paw_L(borders), 40, 'LineWidth', 1.5);
+scatter(swings_start, y_hindlimb_paw_L(swings_start), 40, 'LineWidth', 1.5)
+scatter(stances_start, y_hindlimb_paw_L(stances_start), 40,'LineWidth', 1.5)
+xlabel('Frames (fps)');
+ylabel('Height (y)');
+title('Findpeak non inverted');
+legend('y pose', 'peaks', 'borders', 'swings startpoints', 'stances startpoints');
+ylim([min(y_hindlimb_paw_L), max(y_hindlimb_paw_L)]);
+xlim([0,Frames(end-1)]);
+grid on;
 %% clustering of steps features_Height 
 
 % Step_Heigth_max = max (peak_prominence);      %find max value for thresholding
@@ -292,3 +319,9 @@ Step_cycle_Features.Properties.VariableNames(1:5) = {'Step_Cycle_Duration', 'Ste
 %%
 writetable(Step_cycle_Features,[file_path,'\',file_name_side, '_Step_cycle_Features_.csv']);
 save ([file_path,'\',file_name_side, '_Step_cycle_Features_.Mat'])
+
+%%
+function result = hypot3(x, y, z)
+    % Hypot in 3D
+    result = sqrt(x.^2 + y.^2 + z.^2);
+end
