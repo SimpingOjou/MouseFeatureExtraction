@@ -1,6 +1,6 @@
 function [] = plot_limb(vectors, start_pos, angles)
     % Function adding the successive vectors and their corresponding angles
-    %   to plot, starting at start_pos
+    %   to plot, with the joint center_around_joint_id at (0,0)
     % If no angle is provided (angles=[]), the function simply add the
     %   vectors to the plot
 
@@ -8,7 +8,7 @@ function [] = plot_limb(vectors, start_pos, angles)
 
     % Calculate the starting position to place the joint
     %   center_around_joint_id at (0,0)
-    %start_pos = -sum(vectors(1:center_around_joint_id,:), 1);
+    start_pos = ;
     
     % calculate the successive positions of the joints by adding the
     %   vectors

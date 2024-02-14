@@ -352,7 +352,7 @@ hindlimb_joint_angles = successive_angles(hindlimb_vectors, ground_vec);
 % 3D matrix containing (limb part id, frame id, x or y coordinate)
 % With limb part id : 1=l_spine_hip, 2=l_hip_knee, 3=l_knee_anckle,
 % 4=l_anckle_hindpaw, 5=l_hindpaw_hindfinger
-forelimb_vectors = get_vectors_from_pos([x_body(:, 4) x_forelimb_L], [y_body(:, 4) y_forelimb_L]);
+forelimb_vectors = get_vectors_from_pos([x_body(:, 3) x_forelimb_L], [y_body(:, 3) y_forelimb_L]);
 
 % Vector corresponding to the ground direction, opposite to the movement
 ground_vec = [-1 0];
@@ -369,9 +369,9 @@ delay = 0.1;    % Delay between frames to display (= second per frame)
 % Id of the joint considered to be the center of the limb
 center_joint_id = 1;
 hindlimb_start_pos = [-0.5 0];
-forelimb_start_pos = [0.5 -0.5];
+forelimb_start_pos = [0.5 0];
 % Limits of the plot [x_min x_max y_min y_max]
-plot_limits = [-2 2.5 -2 1.5];
+plot_limits = [-2 2 -2 1];
 
 
 close all;
