@@ -25,7 +25,7 @@ function [] = plot_limb(vectors, center_around_joint_id, angles)
         %   plotted angle starts at the vector it represents
         th_unit = linspace(0,1);
         vectors_size = size(vectors);
-        thetas = -vec_angle(-vectors, repmat([1 0], vectors_size(1), 1)) + th_unit.*angles;
+        thetas = -angle_from_vec(-vectors, repmat([1 0], vectors_size(1), 1)) + th_unit.*angles;
     
         % Cartesian coordinates of the fraction of circle representing the
         %   angle

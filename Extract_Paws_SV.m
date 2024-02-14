@@ -13,8 +13,8 @@ close all;
 [input_array_ventral, file_path_ventral, file_name_ventral, file_extension_ventral] = browse_file('csv', 'Ventral view input data file');
 
 file_path = file_path_side;
-file_name_ext_side = strcat(file_name_side, file_extension_side)
-file_name_ext_ventral = strcat(file_name_ventral, file_extension_ventral)
+file_name_ext_side = strcat(file_name_side, file_extension_side);
+file_name_ext_ventral = strcat(file_name_ventral, file_extension_ventral);
 
 Sampling = 199;   
 % calibration factor to transform pixels in centimeters 
@@ -317,6 +317,61 @@ Steps_Functional_Amplitude_sd = std(Steps_Heigth_Medium);    % Only steps with m
 Steps_Propulsive_Number = length(Steps_Height_High);      % Only steps with large amplitude
 Steps_Propulsive_Amplitude_mean = mean(Steps_Height_High);      % Only steps with large amplitude
 Steps_Propulsive_Amplitude_sd = std(Steps_Height_High);      % Only steps with large amplitude
+
+%% Hindlimb joint angles
+
+% body : head, spine 0% (neck base), spine 25%, spine 50%, spine 75%, tail base
+% forelimb : shoulder, elbow, wrist, forepaw
+% hindlimb : hip, knee, anckle, hindpaw, hindfingers
+% tail : tail base, tail 25%, tail 50%, tail 75%, tail 100%.
+
+% Calculate the vectors corresponding to the parts of the hind limb
+
+% 3D matrix containing (limb part id, frame id, x or y coordinate)
+% With limb part id : 1=l_hip_shoulder, 2=l_hip_knee, 3=l_knee_anckle,
+% 4=l_anckle_hindpaw, 5=l_hindpaw_hindfinger
+hindlimb_vectors = get_vectors_from_pos([x_body(:, 5) x_hindlimb_L], [y_body(:, 5) y_hindlimb_L]);
+
+% To access the vector corresponding to hip-shoulder, use
+%   squeeze(hindlimb_vectors(1,:,:))
+
+% Vector corresponding to the ground direction, opposite to the movement
+ground_vec = [-1 0];
+
+% Get the angles on each frame (in rad)
+% angles is of shape : (joint id, frame id)
+% With joint id : 1=hip, 2=knee, 3=anckle, 4=hindpaw
+hind_vec_size = size(hindlimb_vectors);
+hindlimb_joint_angles = zeros(hind_vec_size(1), hind_vec_size(2));
+for i=1:hind_vec_size(1)-1
+    hindlimb_joint_angles(i,:) = angle_from_vec(-squeeze(hindlimb_vectors(i,:,:)), squeeze(hindlimb_vectors(i+1,:,:)));
+end
+hindlimb_joint_angles(end,:) = angle_from_vec(-squeeze(hindlimb_vectors(end,:,:)), repmat(ground_vec, hind_vec_size(2), 1));
+
+%% Display the joint angles (animated)
+
+r = 0.1;        % Radius of the circle in the plot representing the angles
+delay = 0.1;    % Delay between frames to display (= second per frame)
+% Id of the joint centered at (0,0)
+center_joint_id = 1;
+% Limits of the plot [x_min x_max y_min y_max]
+plot_limits = [-1.5 1.5 -2 1];
+
+
+close all;
+figure;
+grid
+axis(plot_limits)
+ang_size = size(hindlimb_joint_angles(1,:));
+for i=1:ang_size(2)
+    cla()
+
+    vectors = squeeze(hindlimb_vectors(:,i,:));
+    plot_limb(vectors, center_joint_id, squeeze(hindlimb_joint_angles(:,i)))
+
+    drawnow()
+    pause(delay)
+end
 
 %%  create summary table with all values %%%
 Step_cycle_features = padcat(step_duration, step_frequency ,step_height, step_length, step_speed);
