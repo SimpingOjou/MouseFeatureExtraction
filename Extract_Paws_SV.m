@@ -24,6 +24,32 @@ CF = 18.8; % change the calibration factor as needed
     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
     y_tail, z_tail] = Initialization(file_path, file_name_ext_side,...
     file_name_ext_ventral, CF, Sampling);
+
+%% Plot all the points
+
+delay = 0.1;
+% Limits of the plot [x_min x_max y_min y_max]
+plot_limits = [-36 -20 -8 -5];
+
+frame_nbr = size(Time);
+frame_nbr = frame_nbr(1);
+
+close all;
+figure;
+hold on
+grid
+%axis(plot_limits)
+for i=1:frame_nbr
+    cla()
+    
+    points_x = {x_body(i,:); x_forelimb_L(i,:); x_hindlimb_L(i,:); x_tail(i,:)};
+    points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
+
+    plot_points_and_angles(points_x, points_y, [])
+
+    drawnow()
+    pause(delay)
+end
       
 %% transformation of xyz axes to zero 
 % arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
@@ -205,7 +231,7 @@ a_vector_sd = std(a_vector);
 
 % 10) Max limb endpoint velocity
 % max_v = max(hypot(v_vector(1), v_vector(2))); % velocity over the direction
-velocity_paw_L = hypot3(diff(x_hindlimb_paw_L)./diff(Time),...
+velocity_paw_L = Hypot3D(diff(x_hindlimb_paw_L)./diff(Time),...
     diff(y_hindlimb_paw_L)./diff(Time),...
     diff(z_hindlimb_paw_L)./diff(Time));
 max_v = max(velocity_paw_L);

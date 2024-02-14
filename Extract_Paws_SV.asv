@@ -24,6 +24,32 @@ CF = 18.8; % change the calibration factor as needed
     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
     y_tail, z_tail] = Initialization(file_path, file_name_ext_side,...
     file_name_ext_ventral, CF, Sampling);
+
+%%
+delay = 0.1;
+% Limits of the plot [x_min x_max y_min y_max]
+plot_limits = [-36 - -8 -5];
+
+frame_nbr = size(Time);
+frame_nbr = frame_nbr(1);
+
+close all;
+figure;
+hold on
+grid
+axis(plot_limits)
+for i=1:frame_nbr
+    cla()
+    
+    points_x = {x_body(i,:); x_forelimb_L(i,:); x_hindlimb_L(i,:); x_tail(i,:)};
+    points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
+
+    angles = [];
+    plot_points_and_angles(points_x, points_y, angles)
+
+    drawnow()
+    pause(delay)
+end
       
 %% transformation of xyz axes to zero 
 % arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
@@ -352,7 +378,7 @@ hindlimb_joint_angles = successive_angles(hindlimb_vectors, ground_vec);
 % 3D matrix containing (limb part id, frame id, x or y coordinate)
 % With limb part id : 1=l_spine_hip, 2=l_hip_knee, 3=l_knee_anckle,
 % 4=l_anckle_hindpaw, 5=l_hindpaw_hindfinger
-forelimb_vectors = get_vectors_from_pos([x_body(:, 3) x_forelimb_L], [y_body(:, 3) y_forelimb_L]);
+forelimb_vectors = get_vectors_from_pos([x_body(:, 4) x_forelimb_L], [y_body(:, 4) y_forelimb_L]);
 
 % Vector corresponding to the ground direction, opposite to the movement
 ground_vec = [-1 0];
@@ -369,9 +395,9 @@ delay = 0.1;    % Delay between frames to display (= second per frame)
 % Id of the joint considered to be the center of the limb
 center_joint_id = 1;
 hindlimb_start_pos = [-0.5 0];
-forelimb_start_pos = [0.5 0];
+forelimb_start_pos = [0.5 -0.5];
 % Limits of the plot [x_min x_max y_min y_max]
-plot_limits = [-2 2 -2 1];
+plot_limits = [-2 2.5 -2 1.5];
 
 
 close all;
