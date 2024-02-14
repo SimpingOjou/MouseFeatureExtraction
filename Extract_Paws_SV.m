@@ -4,22 +4,31 @@ clear all;
 close all;
 
 % Constants
-file_name_side = 'Sideview_mouse 35_Run_1.csv';
-file_name_ventral = 'Ventralview_mouse 35_Run_1.csv';
-file_path = 'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Data';
+% file_name_side = 'Sideview_mouse 35_Run_1.csv';
+% file_name_ventral = 'Ventralview_mouse 35_Run_1.csv';
+% file_path = 'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Data';
+
+% Ask the user for the input data files
+[input_array_side, file_path_side, file_name_side, file_extension_side] = browse_file('csv', 'Side view input data file');
+[input_array_ventral, file_path_ventral, file_name_ventral, file_extension_ventral] = browse_file('csv', 'Ventral view input data file');
+
+file_path = file_path_side;
+file_name_ext_side = strcat(file_name_side, file_extension_side)
+file_name_ext_ventral = strcat(file_name_ventral, file_extension_ventral)
+
 Sampling = 199;   
 % calibration factor to transform pixels in centimeters 
 CF = 18.8; % change the calibration factor as needed 
 
 [Time, x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
-    y_tail, z_tail] = Initialization(file_path, file_name_side,...
-    file_name_ventral, CF, Sampling);
+    y_tail, z_tail] = Initialization(file_path, file_name_ext_side,...
+    file_name_ext_ventral, CF, Sampling);
       
 %% transformation of xyz axes to zero 
-arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
-    z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
-    y_tail, z_tail};  % Store arrays in a cell array
+% arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
+%     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
+%     y_tail, z_tail};  % Store arrays in a cell array
 
 [x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
@@ -316,9 +325,3 @@ Step_cycle_Features.Properties.VariableNames(1:5) = {'Step_Cycle_Duration', 'Ste
 %%
 writetable(Step_cycle_Features,[file_path,'\',file_name_side, '_Step_cycle_Features_.csv']);
 save ([file_path,'\',file_name_side, '_Step_cycle_Features_.Mat'])
-
-%%
-function result = hypot3(x, y, z)
-    % Hypot in 3D
-    result = sqrt(x.^2 + y.^2 + z.^2);
-end

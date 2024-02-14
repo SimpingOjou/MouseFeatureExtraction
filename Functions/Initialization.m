@@ -15,7 +15,7 @@ function [Time, x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
         error('The two videos have different frame numbers!');
     end
 
-    Time = Frames * (1 / Sampling);
+    Time = Frames / Sampling;
     
     % Extracting marker positions and transforming them
     x_body = -1 * Corridor_Side(:, [2, 5, 8, 11, 14, 17]) / CF; 
