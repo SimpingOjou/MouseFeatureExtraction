@@ -40,7 +40,7 @@ Time = ([Time(2:end,:)]);
 %%  Feature calculation
 
 % 1) Foot trajectory 
-% TOASK: why from 2:end?
+% TOASK: why from 2:end? should not matter
 x_forelimb_foot_L = x_forelimb_L(2:end,4); 
 y_forelimb_foot_L = y_forelimb_L(2:end,4); 
 x_body_foot = x_body(2:end,2:end);
