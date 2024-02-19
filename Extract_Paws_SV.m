@@ -35,7 +35,7 @@ frame_nbr = size(Time);
 frame_nbr = frame_nbr(1);
 
 close all;
-figure;
+h = figure;
 hold on
 grid
 %axis(plot_limits)
@@ -49,6 +49,10 @@ for i=1:frame_nbr
 
     drawnow()
     pause(delay)
+
+    if ~ishandle(h)
+        break
+    end
 end
       
 %% transformation of xyz axes to zero 
@@ -392,32 +396,30 @@ forelimb_joint_angles = successive_angles(forelimb_vectors, ground_vec);
 
 r = 0.1;        % Radius of the circle in the plot representing the angles
 delay = 0.1;    % Delay between frames to display (= second per frame)
-% Id of the joint considered to be the center of the limb
-center_joint_id = 1;
-hindlimb_start_pos = [-0.5 0];
-forelimb_start_pos = [0.5 -0.5];
 % Limits of the plot [x_min x_max y_min y_max]
 plot_limits = [-2 2.5 -2 1.5];
 
-
 close all;
-figure;
+h = figure;
 grid
-axis(plot_limits)
+%axis(plot_limits)
 ang_size = size(hindlimb_joint_angles(1,:));
 for i=1:ang_size(2)
     cla()
 
-    vectors = squeeze(hindlimb_vectors(:,i,:));
-    start_pos = hindlimb_start_pos - sum(vectors(1:center_joint_id,:), 1);
-    plot_limb(vectors, start_pos, squeeze(hindlimb_joint_angles(:,i)))
+    points_x = {x_body(i,:); x_forelimb_L(i,:); x_hindlimb_L(i,:); x_tail(i,:)};
+    points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
 
-    vectors = squeeze(forelimb_vectors(:,i,:));
-    start_pos = forelimb_start_pos - sum(vectors(1:center_joint_id,:), 1);
-    plot_limb(vectors, start_pos, squeeze(forelimb_joint_angles(:,i)))
+    angles = {[], squeeze(forelimb_joint_angles(2:end,i)), squeeze(hindlimb_joint_angles(2:end,i)), []};
+
+    plot_points_and_angles(points_x, points_y, angles)
 
     drawnow()
     pause(delay)
+
+    if ~ishandle(h)
+        break
+    end
 end
 
 %%  create summary table with all values %%%

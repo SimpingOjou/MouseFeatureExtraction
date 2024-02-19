@@ -25,30 +25,34 @@ CF = 18.8; % change the calibration factor as needed
     y_tail, z_tail] = Initialization(file_path, file_name_ext_side,...
     file_name_ext_ventral, CF, Sampling);
 
-%%
+%% Plot all the points
+
 delay = 0.1;
 % Limits of the plot [x_min x_max y_min y_max]
-plot_limits = [-36 - -8 -5];
+plot_limits = [-36 -20 -8 -5];
 
 frame_nbr = size(Time);
 frame_nbr = frame_nbr(1);
 
 close all;
-figure;
+h = figure;
 hold on
 grid
-axis(plot_limits)
+%axis(plot_limits)
 for i=1:frame_nbr
     cla()
     
     points_x = {x_body(i,:); x_forelimb_L(i,:); x_hindlimb_L(i,:); x_tail(i,:)};
     points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
 
-    angles = [];
-    plot_points_and_angles(points_x, points_y, angles)
+    plot_points_and_angles(points_x, points_y, [])
 
     drawnow()
     pause(delay)
+
+    if ~ishandle(h)
+        break
+    end
 end
       
 %% transformation of xyz axes to zero 
@@ -231,7 +235,7 @@ a_vector_sd = std(a_vector);
 
 % 10) Max limb endpoint velocity
 % max_v = max(hypot(v_vector(1), v_vector(2))); % velocity over the direction
-velocity_paw_L = hypot3(diff(x_hindlimb_paw_L)./diff(Time),...
+velocity_paw_L = Hypot3D(diff(x_hindlimb_paw_L)./diff(Time),...
     diff(y_hindlimb_paw_L)./diff(Time),...
     diff(z_hindlimb_paw_L)./diff(Time));
 max_v = max(velocity_paw_L);
@@ -401,23 +405,35 @@ plot_limits = [-2 2.5 -2 1.5];
 
 
 close all;
-figure;
+h = figure;
 grid
-axis(plot_limits)
+axis
+%axis(plot_limits)
 ang_size = size(hindlimb_joint_angles(1,:));
 for i=1:ang_size(2)
     cla()
 
-    vectors = squeeze(hindlimb_vectors(:,i,:));
-    start_pos = hindlimb_start_pos - sum(vectors(1:center_joint_id,:), 1);
-    plot_limb(vectors, start_pos, squeeze(hindlimb_joint_angles(:,i)))
+    points_x = {x_body(i,:); [x_forelimb_L(i,:) x_forelimb_L; x_hindlimb_L(i,:); x_tail(i,:)};
+    points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
 
-    vectors = squeeze(forelimb_vectors(:,i,:));
-    start_pos = forelimb_start_pos - sum(vectors(1:center_joint_id,:), 1);
-    plot_limb(vectors, start_pos, squeeze(forelimb_joint_angles(:,i)))
+    % vectors = squeeze(hindlimb_vectors(:,i,:));
+    % start_pos = hindlimb_start_pos - sum(vectors(1:center_joint_id,:), 1);
+    % plot_limb(vectors, start_pos, squeeze(hindlimb_joint_angles(:,i)))
+    % 
+    % vectors = squeeze(forelimb_vectors(:,i,:));
+    % start_pos = forelimb_start_pos - sum(vectors(1:center_joint_id,:), 1);
+    % plot_limb(vectors, start_pos, squeeze(forelimb_joint_angles(:,i)))
+
+    angles = {[], squeeze(forelimb_joint_angles(:,i)), squeeze(hindlimb_joint_angles(:,i)), []};
+
+    plot_points_and_angles(points_x, points_y, angles)
 
     drawnow()
     pause(delay)
+
+    if ~ishandle(h)
+        break
+    end
 end
 
 %%  create summary table with all values %%%

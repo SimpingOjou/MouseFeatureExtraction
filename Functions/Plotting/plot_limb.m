@@ -25,7 +25,13 @@ function [] = plot_limb(vectors, start_pos, angles)
         %   plotted angle starts at the vector it represents
         th_unit = linspace(0,1);
         vectors_size = size(vectors);
-        thetas = -angle_from_vec(-vectors, repmat([1 0], vectors_size(1), 1)) + th_unit.*angles;
+        angle_size = size(angles);
+        if angle_size(1) ~= vectors_size(1)
+            error("The number of angles doesn't match the number of vectors")
+        end
+
+        phase_shift = -angle_from_vec(-vectors, repmat([1 0], vectors_size(1), 1));
+        thetas = phase_shift + th_unit.*angles;
     
         % Cartesian coordinates of the fraction of circle representing the
         %   angle
