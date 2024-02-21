@@ -49,6 +49,8 @@ borders_fing = rmmissing(unique([hlb_fing(1).XData, hlb_fing(2).XData]))';
 %% Step analysis
 
 v_fing = diff(y_hindlimb_fingers_L)./diff(Time);
+% border is minimum condition filters out local minimums
+borders_fing = borders_fing(v_fing(borders_fing) == 0); 
 v_threshold_lift = 5; %cm/s
 plot_thresh = v_threshold_lift * ones(1, length(v_fing));
 
@@ -60,16 +62,26 @@ scatter(peaks_pos_fing, v_fing(peaks_pos_fing-1), 'LineWidth',2);
 scatter(peaks_pos_paw, v_fing(peaks_pos_paw-1),'LineWidth',2);
 plot(plot_thresh, 'LineWidth',2);
 scatter(borders_paw, v_fing(borders_paw),'LineWidth',2)
+scatter(borders_fing, v_fing(borders_fing),'LineWidth',2)
 legend({'v-fing','peak-pos-fingers','peak-pos-paw',...
-    'v-threshold', 'borders'},"Location","southeast");
+    'v-threshold', 'borders-paw', 'borders-fing'},"Location","southeast");
 xlabel('Time [Frames]')
 ylabel('Velocity [cm/s]')
 hold off;
 
-swings = [];
-touchdowns = borders_fing(3:end); %first one is useless data
+touchdowns = []; 
+for i = 1:length(borders_fing)
+    if borders_paw(i) < borders_fing(i) 
+        touchdowns = [touchdowns, borders_paw(i)];
+    else 
+        touchdowns = [touchdowns, borders_fing(i)]; 
+    end
+end
 
-for i = 1:length(peaks_pos_fing)
+% SWINGS
+swings = [];
+for i = 1:length(peaks_pos_fing) % somehow works better with peaks_pos_paw
+
     for j = round(peaks_pos_fing(i) - max(peaks_width_fing)/2): peaks_pos_fing(i)
         % fingers are lifting
         if v_fing(j-1) > v_threshold_lift 
@@ -98,19 +110,9 @@ xlabel('Time [Frames]')
 ylabel('y position [cm]')
 hold off
 
-%% TODO double condition paw and finger peak
-% doodle thursdday at 13:00 in lab (?)
-% camera: dynamic focal length -> approx 
-% start to work with 3D -> zeroing y considering the shift on z
-% presentation about the work -> explain why did things mathemathically.
-% Define recovery levels
+% TODO: change borders function bc faulty
 
-
-%% step cycle by derivatives
-% if derivative very positive on y -> lift off
-% lift off defined by whole foot in the air -> look at fingers?
-
-% show video AND position over time
+%% show video AND position over time
 
 v = 'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Videos\Sideview_mouse 35_Run_1.mp4';
 v = VideoReader(v);
