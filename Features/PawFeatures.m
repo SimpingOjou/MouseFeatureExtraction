@@ -18,6 +18,8 @@ CF = 18.8; % change the calibration factor as needed
 
 figure(1)
 plot(y_hindlimb_L)
+xlabel('x [cm]')
+ylabel('y [cm]')
 legend('hip','knee','ankle','paw','fingers')    
 
 %% Selection of paw and finger data
@@ -58,8 +60,8 @@ plot_thresh = v_threshold_lift * ones(1, length(v_fing));
 figure(4)
 plot(v_fing, 'LineWidth', 1.5);
 hold on;
-scatter(peaks_pos_fing, v_fing(peaks_pos_fing-1), 'LineWidth',2);
-scatter(peaks_pos_paw, v_fing(peaks_pos_paw-1),'LineWidth',2);
+scatter(peaks_pos_fing, v_fing(peaks_pos_fing-1), "filled");
+scatter(peaks_pos_paw, v_fing(peaks_pos_paw-1),"filled");
 plot(plot_thresh, 'LineWidth',2);
 scatter(borders_paw, v_fing(borders_paw),'LineWidth',2)
 scatter(borders_fing, v_fing(borders_fing),'LineWidth',2)
@@ -68,6 +70,16 @@ legend({'v-fing','peak-pos-fingers','peak-pos-paw',...
 xlabel('Time [Frames]')
 ylabel('Velocity [cm/s]')
 hold off;
+
+% figure(4)
+% plot(v_fing, 'LineWidth', 1.5);
+% hold on;
+% plot(plot_thresh, 'LineWidth',2);
+% scatter(find(v_fing>v_threshold_lift), v_fing(v_fing > v_threshold_lift),"filled");
+% legend({'finger velocity','v threshold','possible swing startpoints'},"Location","southeast");
+% xlabel('Time [Frames]')
+% ylabel('Velocity [cm/s]')
+% hold off;
 
 touchdowns = []; 
 for i = 1:length(borders_fing)
@@ -81,7 +93,6 @@ end
 % SWINGS
 swings = [];
 for i = 1:length(peaks_pos_fing) % somehow works better with peaks_pos_paw
-
     for j = round(peaks_pos_fing(i) - max(peaks_width_fing)/2): peaks_pos_fing(i)
         % fingers are lifting
         if v_fing(j-1) > v_threshold_lift 
@@ -97,48 +108,68 @@ end
 
 figure(5)
 hold on;
-plot(y_hindlimb_fingers_L)
-plot(y_hindlimb_paw_L)
-scatter(swings, y_hindlimb_fingers_L(swings), 'ro', 'LineWidth', 2)
-scatter(touchdowns, y_hindlimb_fingers_L(touchdowns), 'bo', 'LineWidth', 2)
-scatter(swings, y_hindlimb_paw_L(swings), 'ro', 'LineWidth', 2)
-scatter(touchdowns, y_hindlimb_paw_L(touchdowns), 'bo', 'LineWidth', 2)
+plot(y_hindlimb_fingers_L,'LineWidth', 2)
+plot(y_hindlimb_paw_L,'LineWidth', 2)
+scatter(swings, y_hindlimb_fingers_L(swings),"filled", 'r',...
+        'LineWidth', 2, 'Marker', '^')
+    scatter(touchdowns, y_hindlimb_fingers_L(touchdowns),"filled", 'b',...
+        'LineWidth', 2, 'Marker', 'v')
+    scatter(swings, y_hindlimb_paw_L(swings),"filled", 'r',...
+        'LineWidth', 2, 'Marker', '^')
+    scatter(touchdowns, y_hindlimb_paw_L(touchdowns),"filled", 'b',...
+        'LineWidth', 2, 'Marker', 'v')
 xline(swings,'--')
 xline(touchdowns,'--')
 legend({'fingers','paw','swings','touchdowns'})
 xlabel('Time [Frames]')
-ylabel('y position [cm]')
+ylabel('y [cm]')
 hold off
 
 % TODO: change borders function bc faulty
 
 %% show video AND position over time
 
-v = 'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Videos\Sideview_mouse 35_Run_1.mp4';
+v = 'C:\Users\Simone\Documents\DTU\Biomechanics\MouseFeatureExtraction\Videos\Sideview_mouse 35_Run_1.mp4';
 v = VideoReader(v);
 
 saveVideo = VideoWriter(...
-    'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Videos\Sideview_mouse 35_Run_1_Animated'); %open video file
-saveVideo.FrameRate = 10;
+    'C:\Users\Simone\Documents\DTU\Biomechanics\MouseFeatureExtraction\Videos\Sideview_mouse 35_Run_1_Animated2'...
+    ,'MPEG-4'); %open video file
+saveVideo.FrameRate = 30;
 open(saveVideo)
 
-figure(4)
+figure(6)
+set(4,'units','pixels','position',[0 0 1280 1024])
 for i = 1:v.NumFrames
     subplot(5,1,[1,2,3]); % For video
     frame = readFrame(v);
-    imshow(frame);
+    imshow(fliplr(frame));
     drawnow;
     axis off;
 
     subplot(5,1,[4,5]); % For plot
     plot(y_hindlimb_paw_L);
     hold on;
-    xlabel('Frames'); 
-    ylabel('height');
+    plot(y_hindlimb_fingers_L);
+
+    scatter(swings, y_hindlimb_fingers_L(swings),"filled", 'r',...
+        'LineWidth', 2, 'Marker', '^')
+    scatter(touchdowns, y_hindlimb_fingers_L(touchdowns),"filled", 'b',...
+        'LineWidth', 2, 'Marker', 'v')
+    scatter(swings, y_hindlimb_paw_L(swings),"filled", 'r',...
+        'LineWidth', 2, 'Marker', '^')
+    scatter(touchdowns, y_hindlimb_paw_L(touchdowns),"filled", 'b',...
+        'LineWidth', 2, 'Marker', 'v')
+
+    xlabel('x [cm]'); 
+    ylabel('y [cm]');
     grid on;
     line([i i], [0 y_hindlimb_paw_L(i)],[1 1],'LineStyle','-',...
-        'Marker','O','LineWidth',2,'Color','red');
+        'LineWidth',1,'Color',[0.4660 0.6740 0.1880],...
+        'Marker','*');
     xlim([0,length(y_hindlimb_paw_L)]);
+    legend({'paw position','finger position','swing point',...
+        'touchdown point','','',''})
     hold off;
 
     grab = getframe(gcf);
