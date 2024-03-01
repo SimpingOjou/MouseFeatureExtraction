@@ -4,22 +4,97 @@ clear all;
 close all;
 
 % Constants
-file_name_side = 'Sideview_mouse 35_Run_1.csv';
-file_name_ventral = 'Ventralview_mouse 35_Run_1.csv';
-file_path = 'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Data';
+% file_name_side = 'Sideview_mouse 35_Run_1.csv';
+% file_name_ventral = 'Ventralview_mouse 35_Run_1.csv';
+% file_path = 'C:\Users\Simone\Documents\DTU\Work\MouseFeatureExtraction\Data';
+
+% Ask the user for the input data files
+[input_array_side, file_path_side, file_name_side, file_extension_side] = browse_file('csv', 'Side view input data file');
+[input_array_ventral, file_path_ventral, file_name_ventral, file_extension_ventral] = browse_file('csv', 'Ventral view input data file');
+
+file_path = file_path_side;
+file_name_ext_side = strcat(file_name_side, file_extension_side);
+%file_name_ext_ventral = '';
+file_name_ext_ventral = strcat(file_name_ventral, file_extension_ventral);
+
 Sampling = 199;   
 % calibration factor to transform pixels in centimeters 
 CF = 18.8; % change the calibration factor as needed 
 
 [Time, x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
-    y_tail, z_tail] = Initialization(file_path, file_name_side,...
-    file_name_ventral, CF, Sampling);
+    y_tail, z_tail] = Initialization(file_path, file_name_ext_side,...
+    file_name_ext_ventral, CF, Sampling);
+
+%% Plot all the points
+
+% v = 'D:\Work\LabAssistant\MouseFeatureExtraction\Videos\Dual_side_and_ventral_Mouse22_CnF_1wPostSCI_Test_Corridor_Left_Run1DLC_resnet50_Corridor_sideviewJul22shuffle1_1030000_labeled.mp4';
+% v = VideoReader(v);
+% 
+% saveVideo = VideoWriter(...
+%     'D:\Work\LabAssistant\MouseFeatureExtraction\Export\Sideview_mouse 35_Run_1_Animated', ...
+%     'MPEG-4'); %open video file
+% saveVideo.FrameRate = 10;
+% open(saveVideo)
+% 
+% close all
+% h=figure('units','pixels','position',[1 1 1922 1080]);
+
+
+
+
+delay = 0.1;
+% Limits of the plot [x_min x_max y_min y_max]
+% plot_limits = [-36 0 -10 0]; 
+plot_limits = [-36 -20 -10 0];
+
+frame_nbr = size(Time);
+frame_nbr = frame_nbr(1);
+
+close all;
+h = figure;
+hold on
+grid
+axis(plot_limits)
+for i=1:frame_nbr
+    cla()
+
+    % subplot(5,1,[1,2,3]); % For video
+    % frame = readFrame(v);
+    % imshow(fliplr(frame));
+    % drawnow;
+    % axis off;
+
+
+    % subplot(5,1,[4,5]); % For plot
+    % axis(plot_limits)
+    % xlabel('x'); 
+    % ylabel('y');
+    
+    points_x = {x_body(i,:); x_forelimb_L(i,:); x_hindlimb_L(i,:); x_tail(i,:)};
+    points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
+
+    plot_points_and_angles(points_x, points_y, [])
+
+    drawnow()
+
+    % grab = getframe(gcf);
+    % writeVideo(saveVideo, grab);
+
+
+    pause(delay)
+
+    if ~ishandle(h)
+        break
+    end
+end
+
+% close(saveVideo)
       
 %% transformation of xyz axes to zero 
-arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
-    z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
-    y_tail, z_tail};  % Store arrays in a cell array
+% arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
+%     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
+%     y_tail, z_tail};  % Store arrays in a cell array
 
 [x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
     z_forelimb_L, x_hindlimb_L, y_hindlimb_L, z_hindlimb_L, x_tail,...
@@ -196,7 +271,7 @@ a_vector_sd = std(a_vector);
 
 % 10) Max limb endpoint velocity
 % max_v = max(hypot(v_vector(1), v_vector(2))); % velocity over the direction
-velocity_paw_L = hypot3(diff(x_hindlimb_paw_L)./diff(Time),...
+velocity_paw_L = Hypot3D(diff(x_hindlimb_paw_L)./diff(Time),...
     diff(y_hindlimb_paw_L)./diff(Time),...
     diff(z_hindlimb_paw_L)./diff(Time));
 max_v = max(velocity_paw_L);
@@ -309,6 +384,80 @@ Steps_Propulsive_Number = length(Steps_Height_High);      % Only steps with larg
 Steps_Propulsive_Amplitude_mean = mean(Steps_Height_High);      % Only steps with large amplitude
 Steps_Propulsive_Amplitude_sd = std(Steps_Height_High);      % Only steps with large amplitude
 
+%% Hindlimb joint angles
+
+% body : head, spine 0% (neck base), spine 25%, spine 50%, spine 75%, tail base
+% forelimb : shoulder, elbow, wrist, forepaw
+% hindlimb : hip, knee, anckle, hindpaw, hindfingers
+% tail : tail base, tail 25%, tail 50%, tail 75%, tail 100%.
+
+% Calculate the vectors corresponding to the parts of the hind limb
+
+% 3D matrix containing (limb part id, frame id, x or y coordinate)
+% With limb part id : 1=l_spine_hip, 2=l_hip_knee, 3=l_knee_anckle,
+% 4=l_anckle_hindpaw, 5=l_hindpaw_hindfinger
+hindlimb_vectors = get_vectors_from_pos([x_body(:, 5) x_hindlimb_L], [y_body(:, 5) y_hindlimb_L]);
+
+% To access the vector corresponding to hip-shoulder, use
+%   squeeze(hindlimb_vectors(1,:,:))
+
+% Vector corresponding to the ground direction, opposite to the movement
+ground_vec = [-1 0];
+
+% Get the angles on each frame (in rad)
+% hindlimb_joint_angles is of shape : (joint id, frame id)
+% With joint id : 1=hip, 2=knee, 3=anckle, 4=hindpaw
+hindlimb_joint_angles = successive_angles(hindlimb_vectors, ground_vec);
+
+%% Forelimb joint angles
+% body : head, spine 0% (neck base), spine 25%, spine 50%, spine 75%, tail base
+% forelimb : shoulder, elbow, wrist, forepaw
+% hindlimb : hip, knee, anckle, hindpaw, hindfingers
+% tail : tail base, tail 25%, tail 50%, tail 75%, tail 100%.
+
+% 3D matrix containing (limb part id, frame id, x or y coordinate)
+% With limb part id : 1=l_spine_hip, 2=l_hip_knee, 3=l_knee_anckle,
+% 4=l_anckle_hindpaw, 5=l_hindpaw_hindfinger
+forelimb_vectors = get_vectors_from_pos([x_body(:, 4) x_forelimb_L], [y_body(:, 4) y_forelimb_L]);
+
+% Vector corresponding to the ground direction, opposite to the movement
+ground_vec = [-1 0];
+
+% Get the angles on each frame (in rad)
+% forelimb_joint_angles is of shape : (joint id, frame id)
+% With joint id : 1=hip, 2=knee, 3=anckle, 4=hindpaw
+forelimb_joint_angles = successive_angles(forelimb_vectors, ground_vec);
+
+%% Display the joint angles (animated)
+
+r = 0.1;        % Radius of the circle in the plot representing the angles
+delay = 0.1;    % Delay between frames to display (= second per frame)
+% Limits of the plot [x_min x_max y_min y_max]
+plot_limits = [-2 2.5 -2 1.5];
+
+close all;
+h = figure;
+grid
+%axis(plot_limits)
+ang_size = size(hindlimb_joint_angles(1,:));
+for i=1:ang_size(2)
+    cla()
+
+    points_x = {x_body(i,:); x_forelimb_L(i,:); x_hindlimb_L(i,:); x_tail(i,:)};
+    points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
+
+    angles = {[], squeeze(forelimb_joint_angles(2:end,i)), squeeze(hindlimb_joint_angles(2:end,i)), []};
+
+    plot_points_and_angles(points_x, points_y, angles)
+
+    drawnow()
+    pause(delay)
+
+    if ~ishandle(h)
+        break
+    end
+end
+
 %%  create summary table with all values %%%
 Step_cycle_features = padcat(step_duration, step_frequency ,step_height, step_length, step_speed);
 Step_cycle_Features = array2table(Step_cycle_features);
@@ -316,9 +465,3 @@ Step_cycle_Features.Properties.VariableNames(1:5) = {'Step_Cycle_Duration', 'Ste
 %%
 writetable(Step_cycle_Features,[file_path,'\',file_name_side, '_Step_cycle_Features_.csv']);
 save ([file_path,'\',file_name_side, '_Step_cycle_Features_.Mat'])
-
-%%
-function result = hypot3(x, y, z)
-    % Hypot in 3D
-    result = sqrt(x.^2 + y.^2 + z.^2);
-end
