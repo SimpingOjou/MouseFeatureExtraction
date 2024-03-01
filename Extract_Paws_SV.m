@@ -14,6 +14,7 @@ close all;
 
 file_path = file_path_side;
 file_name_ext_side = strcat(file_name_side, file_extension_side);
+%file_name_ext_ventral = '';
 file_name_ext_ventral = strcat(file_name_ventral, file_extension_ventral);
 
 Sampling = 199;   
@@ -27,9 +28,25 @@ CF = 18.8; % change the calibration factor as needed
 
 %% Plot all the points
 
+% v = 'D:\Work\LabAssistant\MouseFeatureExtraction\Videos\Dual_side_and_ventral_Mouse22_CnF_1wPostSCI_Test_Corridor_Left_Run1DLC_resnet50_Corridor_sideviewJul22shuffle1_1030000_labeled.mp4';
+% v = VideoReader(v);
+% 
+% saveVideo = VideoWriter(...
+%     'D:\Work\LabAssistant\MouseFeatureExtraction\Export\Sideview_mouse 35_Run_1_Animated', ...
+%     'MPEG-4'); %open video file
+% saveVideo.FrameRate = 10;
+% open(saveVideo)
+% 
+% close all
+% h=figure('units','pixels','position',[1 1 1922 1080]);
+
+
+
+
 delay = 0.1;
 % Limits of the plot [x_min x_max y_min y_max]
-plot_limits = [-36 -20 -8 -5];
+% plot_limits = [-36 0 -10 0]; 
+plot_limits = [-36 -20 -10 0];
 
 frame_nbr = size(Time);
 frame_nbr = frame_nbr(1);
@@ -38,9 +55,21 @@ close all;
 h = figure;
 hold on
 grid
-%axis(plot_limits)
+axis(plot_limits)
 for i=1:frame_nbr
     cla()
+
+    % subplot(5,1,[1,2,3]); % For video
+    % frame = readFrame(v);
+    % imshow(fliplr(frame));
+    % drawnow;
+    % axis off;
+
+
+    % subplot(5,1,[4,5]); % For plot
+    % axis(plot_limits)
+    % xlabel('x'); 
+    % ylabel('y');
     
     points_x = {x_body(i,:); x_forelimb_L(i,:); x_hindlimb_L(i,:); x_tail(i,:)};
     points_y = {y_body(i,:); y_forelimb_L(i,:); y_hindlimb_L(i,:); y_tail(i,:)};
@@ -48,12 +77,19 @@ for i=1:frame_nbr
     plot_points_and_angles(points_x, points_y, [])
 
     drawnow()
+
+    % grab = getframe(gcf);
+    % writeVideo(saveVideo, grab);
+
+
     pause(delay)
 
     if ~ishandle(h)
         break
     end
 end
+
+% close(saveVideo)
       
 %% transformation of xyz axes to zero 
 % arrays = {x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
