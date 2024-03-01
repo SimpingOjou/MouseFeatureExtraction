@@ -33,17 +33,20 @@ function [Time, x_body, y_body, z_body, x_forelimb_L, y_forelimb_L,...
     end
 
     Time = Frames / Sampling;
+
+    limb_max_vent_x = max(max(Corridor_Side(:,2:3:end)));
+    limb_max_vent_y = max(max(Corridor_Side(:, 3:3:end)));
     
     % Extracting marker positions and transforming them
-    x_body = -1 * Corridor_Side(:, [2, 5, 8, 11, 14, 17]) / CF; 
-    y_body = -1 * Corridor_Side(:, [3, 6, 9, 12, 15, 18]) / CF; 
+    x_body = (limb_max_vent_x - Corridor_Side(:, [2, 5, 8, 11, 14, 17])) / CF; 
+    y_body = (limb_max_vent_y - Corridor_Side(:, [3, 6, 9, 12, 15, 18])) / CF; 
     
-    x_forelimb_L = -1 * Corridor_Side(:, [32, 35, 38, 41]) / CF;  
-    y_forelimb_L = -1 * Corridor_Side(:, [33, 36, 39, 42]) / CF;  
+    x_forelimb_L = (limb_max_vent_x - Corridor_Side(:, [32, 35, 38, 41])) / CF;  
+    y_forelimb_L = (limb_max_vent_y - Corridor_Side(:, [33, 36, 39, 42])) / CF;  
 
-    x_hindlimb_L = -1 * Corridor_Side(:, [44, 47, 50, 53, 56]) / CF;  
-    y_hindlimb_L = -1 * Corridor_Side(:, [45, 48, 51, 54, 57]) / CF;  
+    x_hindlimb_L = (limb_max_vent_x - Corridor_Side(:, [44, 47, 50, 53, 56])) / CF;  
+    y_hindlimb_L = (limb_max_vent_y - Corridor_Side(:, [45, 48, 51, 54, 57])) / CF;  
 
-    x_tail = -1 * Corridor_Side(:, [17, 20, 23, 26, 29]) / CF;
-    y_tail = -1 * Corridor_Side(:, [18, 21, 24, 27, 30]) / CF; 
+    x_tail = (limb_max_vent_x - Corridor_Side(:, [17, 20, 23, 26, 29])) / CF;
+    y_tail = (limb_max_vent_y - Corridor_Side(:, [18, 21, 24, 27, 30])) / CF; 
 end
