@@ -46,7 +46,7 @@ CF = 18.8; % change the calibration factor as needed
 delay = 0.1;
 % Limits of the plot [x_min x_max y_min y_max]
 % plot_limits = [-36 0 -10 0]; 
-plot_limits = [-36 -20 -10 0];
+%plot_limits = [-36 -20 -10 0];
 
 frame_nbr = size(Time);
 frame_nbr = frame_nbr(1);
@@ -55,7 +55,7 @@ close all;
 h = figure;
 hold on
 grid
-axis(plot_limits)
+%axis(plot_limits)
 for i=1:frame_nbr
     cla()
 
