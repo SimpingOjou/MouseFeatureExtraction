@@ -5,11 +5,11 @@ Created on Sun Mar  3 17:03:31 2024
 @author: walid
 """
 
-import tkinter as tk
-from tkinter import filedialog as fd
+from GUI import GUI
 import os
 import csv
 
+filetypes = (('CSV', '*.csv'),('All files', '*.*'))
 data_ext = [".csv",".txt"]
 x_col_name = "x"
 y_col_name = "y"
@@ -26,15 +26,8 @@ class TrackingData:
     def __init__(self, data_name, file_path=None, data_delimiter=',', bodypart_row_name="bodyparts", coord_row_name="coords"):
         # Ask to pick a path if none is given
         if file_path is None:
-            root = tk.Tk()
-            root.withdraw()
-            root.update()
-
-            #print("Opening the dialog window for " + data_name + " ...")
-            file_path = fd.askopenfilename(title = data_name, initialdir=".", filetypes=(('CSV', '*.csv'),('All files', '*.*')))
-
-            root.update()
-            root.destroy()
+            ui = GUI()
+            file_path = ui.ask_data_file(data_name, initial_dir='.', filetypes=filetypes)
         
         # Check that the file exists
         if file_path == "" or not os.path.exists(file_path):

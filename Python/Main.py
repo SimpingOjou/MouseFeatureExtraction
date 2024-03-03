@@ -15,3 +15,9 @@ except Exception as e:
 
 # Print the x coordinate of the head at frame 200 
 print(td_sideview.data["head"].x[200])
+
+# Print the y coordinate of the anckle at frame 143 
+print(td_sideview.data["anckle"].x[143])
+
+# Print the likelihood for the left hindfinger tracking at the last frame 
+print(td_sideview.data["lHindfingers"].x[-1])
