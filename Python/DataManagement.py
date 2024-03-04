@@ -11,8 +11,11 @@ import os
 import csv
 import cv2
 
+
 class DataFileException(Exception):
     """Raise for errors when attempting to read a data file"""
+
+
 
 # Base class for opening data files
 class Data:
@@ -39,6 +42,8 @@ class Data:
         if self.file_ext not in data_ext:
             raise DataFileException("Error : '" + self.file_ext + "' is not a valid data extension")
 
+
+
 # Class containing the data of a body part for a single frame
 class BodyPart:
     def __init__(self, bodypart_name):
@@ -47,8 +52,15 @@ class BodyPart:
         self.y = []
         self.likelihood = []
 
-    def show_frame(self, frame_num):
+    # Returns the coordinates (x,y) of the tracked body part at frame frame_num
+    def get_coord_at_frame(self, frame_num):
+        return (self.x[frame_num], self.y[frame_num])
+
+    # Print on the command line the data contained in the limb at frame frame_num
+    def print_data_at_frame(self, frame_num):
         print(f"({self.x[frame_num]}, {self.y[frame_num]}) - {self.likelihood[frame_num]}")
+
+
 
 # Class managing the tracking data
 class TrackingData(Data):
@@ -101,7 +113,8 @@ class TrackingData(Data):
                         else:
                             raise Exception("Error in row '" + coord_row_name + "' : '" + row[i] + "' at column " + i + " is not a valid column name")
                 
-                # If the value is an integer (ie is a frame number)
+                # If the value is an integer (ie is a frame number), 
+                # add the tracking values of that frame to the data of the corresponding bodypart
                 elif row[0].isdigit():
                     for i in x_col:
                         bodypart = all_bodyparts[i]
@@ -141,7 +154,9 @@ class TrackingData(Data):
         for part in self.data:
             self.data[part].x = [(x_max - x) / cf for x in self.data[part].x]
             self.data[part].y = [(y_max - y) / cf for y in self.data[part].y]
-        
+
+
+
 # Class managing video data
 class VideoData(Data):
     # File types allowed when asking the user to pick the data file
@@ -170,18 +185,74 @@ class VideoData(Data):
         # Coordinate pointed on an image
         self.pointed_coord = None
 
-    def calibrate(self, frame_num, pos_to_point_at_name, expected_x, expected_y):
+        # Default calibration value
+        self.calibration_factor_x = 1
+        self.calibration_factor_y = 1
+        self.origin_screen_x = 0
+        self.origin_screen_y = 0
+        self.origin_tracking_x = 0
+        self.origin_tracking_y = 0
+
+
+    # Setup the calibration factors to adjust for variations between the video and the tracked points
+    def calibrate(self, frame_num, 
+                  pos1_to_point_at_name, expected_coord_1,
+                  pos2_to_point_at_name, expected_coord_2):
+        # Point the first coordinates
         self.pointed_coord = None
 
         while self.pointed_coord is None:
-            self.show_frame(frame_num, img_name="Point at " + pos_to_point_at_name, mouse_callback_func=self.__get_point_click_event)
+            self.show_frame(frame_num, img_name="Point at " + pos1_to_point_at_name, mouse_callback_func=self.__get_point_click_event)
 
-        print(self.pointed_coord)
+        pointed_x1 = self.pointed_coord[0]
+        pointed_y1 = self.pointed_coord[1]
 
-        
+        # Point the second coordinates
+        self.pointed_coord = None
+
+        while self.pointed_coord is None:
+            self.show_frame(frame_num, img_name="Point at " + pos2_to_point_at_name, mouse_callback_func=self.__get_point_click_event)
+
+        pointed_x2 = self.pointed_coord[0]
+        pointed_y2 = self.pointed_coord[1]
+
+        # Calculate the transformation from tracking data screen coordinates to current video screen coordinates
+        expected_x1, expected_y1 = expected_coord_1
+        expected_x2, expected_y2 = expected_coord_2
+
+        # Moving 1 unit along x on the video corresponds to moving calibration_factor_x units on the tracking data
+        self.calibration_factor_x = (expected_x2 - expected_x1) / (pointed_x2 - pointed_x1)
+        self.calibration_factor_y = (expected_y2 - expected_y1) / (pointed_y2 - pointed_y1)
+
+        # Determine a random origin point
+        self.origin_screen_x = pointed_x1
+        self.origin_screen_y = pointed_y1
+        self.origin_tracking_x = expected_x1
+        self.origin_tracking_y = expected_y1
 
 
+    def to_tracking_space(self, coord):
+        tracked_space_pointed_x = self.origin_tracking_x + self.calibration_factor_x * (coord[0] - self.origin_screen_x)
+        tracked_space_pointed_y = self.origin_tracking_y + self.calibration_factor_y * (coord[1] - self.origin_screen_y)
 
+        return tracked_space_pointed_x, tracked_space_pointed_y
+
+
+    # Shows the frame frame_num of the video, in a window named window_name (if provided, otherwise auto generated)
+    # And allow the user to click on a point, before returning the coordinates of the click
+    # in the same screen space as the tracked data
+    def point_at(self, frame_num, window_name=None):
+        # Point the first coordinates
+        self.pointed_coord = None
+
+        while self.pointed_coord is None:
+            self.show_frame(frame_num, img_name=window_name, mouse_callback_func=self.__get_point_click_event)
+
+        return self.to_tracking_space(self.pointed_coord)
+    
+
+    # Shows the frame frame_num of the video, in a window named img_name (if provided, otherwise auto generated name)
+    # And add the callback function mouse_callback_func on mouse events (if provided)
     def show_frame(self, frame_num, img_name=None, mouse_callback_func=None):
         # Set the video to the required frame
         self.vidcap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
@@ -208,6 +279,9 @@ class VideoData(Data):
         else:
             print("Failed to read the frame " + str(frame_num) + " from the video file at " + self.file_path)
 
+
+    # Callback function allowing the user to point and click on the displayed image
+    # The coordinates of the clicked point are stored in self.pointed_coord, and a dot appears on screen at that position
     def __get_point_click_event(self, 
                                   image, img_name, 
                                   event, x, y, flags, params):
@@ -215,7 +289,8 @@ class VideoData(Data):
         if event == cv2.EVENT_LBUTTONDOWN: 
             img = image.copy()
 
-            print(x, ' ', y) 
+            print(x, ' ', y)
+            print(self.to_tracking_space((x,y))) 
 
             # Set the pointed coordinates
             self.pointed_coord = (x,y)
@@ -224,6 +299,8 @@ class VideoData(Data):
 
             cv2.imshow(img_name, img)
 
+
+    # Releases the video when the instance is destroyed
     def __del__(self):
         # Release the video when deleting the instance
         if hasattr(self, 'vidcap'):

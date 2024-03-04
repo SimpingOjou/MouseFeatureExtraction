@@ -4,27 +4,27 @@ from math import sqrt, atan2, cos, sin
 
 class WorldFrame:
     def __init__(self, cam1_mark_dist, cam2_mark_dist, cam1_cam2_dist, 
-                 mark_screen_coord_1, mark_screen_coord_2, 
-                 focal_length_1, focal_length_2, 
-                 screen_resolution_1, screen_resolution_2):
+                 mark_screen_coord_side, mark_screen_coord_ventral, 
+                 focal_length_side, focal_length_ventral, 
+                 screen_resolution_side, screen_resolution_ventral):
         
         ## Save the parameters in the WorldFrameData object
         self.d1 = cam1_mark_dist
         self.D2 = cam2_mark_dist
         self.Th = cam1_cam2_dist
 
-        self.x1_M_s = mark_screen_coord_1[0]
-        self.y1_M_s = mark_screen_coord_1[1]
-        self.x2_M_s = mark_screen_coord_2[0]
-        self.y2_M_s = mark_screen_coord_2[1]
+        self.x1_M_s = mark_screen_coord_side[0]
+        self.y1_M_s = mark_screen_coord_side[1]
+        self.x2_M_s = mark_screen_coord_ventral[0]
+        self.y2_M_s = mark_screen_coord_ventral[1]
 
-        self.f1 = focal_length_1
-        self.f2 = focal_length_2
+        self.f1 = focal_length_side
+        self.f2 = focal_length_ventral
 
-        self.W1 = screen_resolution_1[0]
-        self.H1 = screen_resolution_1[1]
-        self.W2 = screen_resolution_2[0]
-        self.H2 = screen_resolution_2[1]
+        self.W1 = screen_resolution_side[0]
+        self.H1 = screen_resolution_side[1]
+        self.W2 = screen_resolution_ventral[0]
+        self.H2 = screen_resolution_ventral[1]
 
         ## Use of the calculated formulas to determine the parameters needed to change frame
         self.delta_y_1 = -(self.d1 / self.f1) * (self.y1_M_s - self.H1/2)
