@@ -22,6 +22,9 @@ class BodyPart:
         self.y = []
         self.likelihood = []
 
+class DataFileException(Exception):
+    """Raise for errors when attempting to read a data file"""
+
 class TrackingData:
     def __init__(self, data_name, file_path=None, data_delimiter=',', bodypart_row_name="bodyparts", coord_row_name="coords"):
         # Ask to pick a path if none is given
@@ -31,7 +34,7 @@ class TrackingData:
         
         # Check that the file exists
         if file_path == "" or not os.path.exists(file_path):
-            raise FileNotFoundError("Error : '" + file_path + "' is not a valid file path")
+            raise DataFileException("Error : '" + file_path + "' is not a valid file path")
         
         # Save the file parameters in the object
         self.file_path = file_path
@@ -45,7 +48,7 @@ class TrackingData:
 
         # Check that the file extension is valid
         if self.file_ext not in data_ext:
-            raise Exception("Error : '" + self.file_ext + "' is not a valid data extension")
+            raise DataFileException("Error : '" + self.file_ext + "' is not a valid data extension")
 
         # Open the data file and extract the data
         with open(self.file_path, mode='r') as data_file:

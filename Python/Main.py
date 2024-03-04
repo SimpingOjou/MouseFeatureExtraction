@@ -1,16 +1,16 @@
 import DataManagement as Data
 
 try:
-    td_sideview = Data.TrackingData(data_name="Side view")
-except Exception as e:
+    td_sideview = Data.TrackingData(data_name="Side view", file_path="./Data/Sideview_mouse 35_Run_1.csv")
+except Data.DataFileException as e:
     print(e)
-    raise
+    exit()
 
 try:
-    td_ventralview = Data.TrackingData(data_name="Ventral view")
-except Exception as e:
+    td_ventralview = Data.TrackingData(data_name="Ventral view", file_path="./Data/Ventralview_mouse 35_Run_1.csv")
+except Data.DataFileException as e:
     print(e)
-    raise
+    exit()
 
 
 # Print the x coordinate of the head at frame 200 
