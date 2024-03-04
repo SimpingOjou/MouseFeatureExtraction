@@ -14,7 +14,7 @@ class GUI(metaclass=Singleton):
         root.withdraw()
         root.wm_attributes('-topmost', True)
 
-    def ask_data_file(self, data_name, initial_dir, filetypes):
+    def ask_data_file(self, data_name, filetypes, initial_dir='.'):
         file_path = fd.askopenfilename(title = data_name, initialdir=initial_dir, filetypes=filetypes)
 
         return file_path

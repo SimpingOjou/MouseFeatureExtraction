@@ -7,30 +7,20 @@ Created on Sun Mar  3 17:03:31 2024
 
 from GUI import GUI
 import os
+
 import csv
-
-filetypes = (('CSV', '*.csv'),('All files', '*.*'))
-data_ext = [".csv",".txt"]
-x_col_name = "x"
-y_col_name = "y"
-likelihood_col_name = "likelihood"
-
-class BodyPart:
-    def __init__(self, bodypart_name):
-        self.name = bodypart_name
-        self.x = []
-        self.y = []
-        self.likelihood = []
+import cv2
 
 class DataFileException(Exception):
     """Raise for errors when attempting to read a data file"""
 
-class TrackingData:
-    def __init__(self, data_name, file_path=None, data_delimiter=',', bodypart_row_name="bodyparts", coord_row_name="coords"):
+# Base class for opening data files
+class Data:
+    def __init__(self, data_name, file_path, initial_dir, file_types, data_ext):
         # Ask to pick a path if none is given
         if file_path is None:
             ui = GUI()
-            file_path = ui.ask_data_file(data_name, initial_dir='.', filetypes=filetypes)
+            file_path = ui.ask_data_file(data_name, initial_dir=initial_dir, filetypes=file_types)
         
         # Check that the file exists
         if file_path == "" or not os.path.exists(file_path):
@@ -39,7 +29,6 @@ class TrackingData:
         # Save the file parameters in the object
         self.file_path = file_path
         self.name = data_name
-        self.data = dict()
 
         # Extract the directory, name and extension of the file
         basename = os.path.basename(file_path)
@@ -49,6 +38,35 @@ class TrackingData:
         # Check that the file extension is valid
         if self.file_ext not in data_ext:
             raise DataFileException("Error : '" + self.file_ext + "' is not a valid data extension")
+
+# Class containing the data of a body part for a single frame
+class BodyPart:
+    def __init__(self, bodypart_name):
+        self.name = bodypart_name
+        self.x = []
+        self.y = []
+        self.likelihood = []
+
+# Class managing the tracking data
+class TrackingData(Data):
+    # File types allowed when asking the user to pick the data file
+    filetypes = (('CSV', '*.csv'),('All files', '*.*'))
+    # Initial directory when asking the user to pick the data file
+    initial_dir = '.'
+    # Extensions allowed for a data file
+    data_ext = [".csv",".txt"]
+
+    # Name of the corresponding columns
+    x_col_name = "x"
+    y_col_name = "y"
+    likelihood_col_name = "likelihood"
+
+    def __init__(self, data_name, file_path=None, data_delimiter=',', bodypart_row_name="bodyparts", coord_row_name="coords"):
+        # Get the data from the file
+        super().__init__(data_name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
+
+        # Create the tracking data dictionnary
+        self.data = dict()
 
         # Open the data file and extract the data
         with open(self.file_path, mode='r') as data_file:
@@ -71,11 +89,11 @@ class TrackingData:
                 # If it's the coordinate (x,y,likelihood) column, save the indices
                 elif row[0] == coord_row_name:
                     for i in range(1,len(row)):
-                        if row[i] == x_col_name:
+                        if row[i] == self.x_col_name:
                             x_col.append(i)
-                        elif row[i] == y_col_name:
+                        elif row[i] == self.y_col_name:
                             y_col.append(i)
-                        elif row[i] == likelihood_col_name:
+                        elif row[i] == self.likelihood_col_name:
                             likelihood_col.append(i)
                         else:
                             raise Exception("Error in row '" + coord_row_name + "' : '" + row[i] + "' at column " + i + " is not a valid column name")
@@ -121,4 +139,50 @@ class TrackingData:
             self.data[part].x = [(x_max - x) / cf for x in self.data[part].x]
             self.data[part].y = [(y_max - y) / cf for y in self.data[part].y]
         
+# Class managing video data
+class VideoData(Data):
+    # File types allowed when asking the user to pick the data file
+    filetypes = (('mp4', '*.mp4'), ('avi', '*.avi'),('All files', '*.*'))
+    # Initial directory when asking the user to pick the data file
+    initial_dir = '.'
+    # Extensions allowed for a data file
+    data_ext = [".mp4",".avi"]
+
+    def __init__(self, data_name, file_path=None):
+        # Get the data from the file
+        super().__init__(data_name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
+
+        # Get the video at the given filepath
+        self.vidcap = cv2.VideoCapture(self.file_path)
+        
+        # Get the frames per second
+        self.fps = self.vidcap.get(cv2.CAP_PROP_FPS) 
+
+        # Get the total numer of frames in the video.
+        self.frame_count = self.vidcap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+        # Calculate the duration of the video in seconds
+        self.duration = self.frame_count / self.fps
+
+
+    def show_frame(self, frame_num):
+        # Set the video to the required frame
+        self.vidcap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+
+        success, image = self.vidcap.read()
+
+        # If frame read successfully
+        if success:
+            #Display the resulting frame
+            cv2.imshow(self.file_name+' frame '+ str(frame_num),image)
+            cv2.waitKey()
+            cv2.destroyAllWindows()
+        else:
+            print("Failed to read the frame " + str(frame_num) + " from the video file at " + self.file_path)
+
+    def __del__(self):
+        # Release the video when deleting the instance
+        if hasattr(self, 'vidcap'):
+            self.vidcap.release()
+
 
