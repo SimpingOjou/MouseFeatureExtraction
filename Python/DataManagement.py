@@ -81,14 +81,41 @@ class TrackingData:
                 elif row[0].isdigit():
                     for i in x_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].x.append(row[i])
+                        self.data[bodypart].x.append(float(row[i]))
                     
                     for i in y_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].y.append(row[i])
+                        self.data[bodypart].y.append(float(row[i]))
                     
                     for i in likelihood_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].likelihood.append(row[i])
+                        self.data[bodypart].likelihood.append(float(row[i]))
+
+    # Get the time variables
+    def get_time(self, sampling):
+        key = next(iter(self.data))
+        frames = len(self.data[key].x)
+        total_time = frames / sampling
+
+        return frames, total_time
+
+    # Converting the data to bottom right origin
+    def convert_origin(self, cf):
+        key = next(iter(self.data))
+        x_max = self.data[key].x[0]
+        y_max = self.data[key].x[0]
+
+        for part in self.data:
+            temp = max([x for x in self.data[part].x])
+            if temp > x_max:
+                x_max = temp
+
+            temp = max([y for y in self.data[part].y])
+            if temp > y_max:
+                y_max = temp
+
+        for part in self.data:
+            self.data[part].x = [(x_max - x) / cf for x in self.data[part].x]
+            self.data[part].y = [(y_max - y) / cf for y in self.data[part].y]
         
 
