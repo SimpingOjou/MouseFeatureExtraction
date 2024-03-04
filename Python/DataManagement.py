@@ -7,7 +7,6 @@ Created on Sun Mar  3 17:03:31 2024
 
 from GUI import GUI
 import os
-
 import csv
 import cv2
 
@@ -72,9 +71,9 @@ class TrackingData(Data):
         self.data = dict()
 
         # Open the data file and extract the data
-        with open(self.file_path, mode='r') as data_file:
+        with open(self.file_path, mode="r") as data_file:
             csv_reader = csv.reader(data_file, delimiter=data_delimiter)
-            
+
             # Temporary values
             all_bodyparts = [""]
             x_col = []
@@ -88,7 +87,7 @@ class TrackingData(Data):
                     for bodypart in row[1:]:
                         self.data[bodypart] = BodyPart(bodypart)
                         all_bodyparts.append(bodypart)
-                    
+
                 # If it's the coordinate (x,y,likelihood) column, save the indices
                 elif row[0] == coord_row_name:
                     for i in range(1,len(row)):
@@ -99,8 +98,16 @@ class TrackingData(Data):
                         elif row[i] == self.likelihood_col_name:
                             likelihood_col.append(i)
                         else:
-                            raise Exception("Error in row '" + coord_row_name + "' : '" + row[i] + "' at column " + i + " is not a valid column name")
-                
+                            raise Exception(
+                                "Error in row '"
+                                + coord_row_name
+                                + "' : '"
+                                + row[i]
+                                + "' at column "
+                                + i
+                                + " is not a valid column name"
+                            )
+
                 # If the value is an integer (ie is a frame number)
                 elif row[0].isdigit():
                     for i in x_col:
@@ -229,4 +236,27 @@ class VideoData(Data):
         if hasattr(self, 'vidcap'):
             self.vidcap.release()
 
+    # get the time variables
+    def get_time(self, sampling):
+        frames = len(self.data["head"].x)
+        time = frames / sampling
 
+        return frames, time
+
+    # converting to bottom right origin
+    def conversion(self, cf):
+        x_max = float(self.data["head"].x[0])
+        y_max = float(self.data["head"].x[0])
+
+        for part in self.data:
+            temp = max([float(x) for x in self.data[part].x])
+            if temp > x_max:
+                x_max = temp
+
+            temp = max([float(y) for y in self.data[part].y])
+            if temp > y_max:
+                y_max = temp
+
+        for part in self.data:
+            self.data[part].x = [(x_max - float(x)) / cf for x in self.data[part].x]
+            self.data[part].y = [(y_max - float(y)) / cf for y in self.data[part].y]
