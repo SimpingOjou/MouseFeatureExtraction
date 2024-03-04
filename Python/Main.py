@@ -4,8 +4,8 @@ import GUI as UI
 
 # Load the tracking datas
 try:
-    td_sideview = Data.TrackingData(data_name="Side view", file_path="./Data/Sideview_mouse 35_Run_1.csv")
-    td_ventralview = Data.TrackingData(data_name="Ventral view", file_path="./Data/Ventralview_mouse 35_Run_1.csv")
+    td_sideview = Data.TrackingData(data_name="Side view tracking", file_path="./Data/Sideview_mouse 35_Run_1.csv")
+    td_ventralview = Data.TrackingData(data_name="Ventral view tracking", file_path="./Data/Ventralview_mouse 35_Run_1.csv")
 except Data.DataFileException as e:
     print(e)
     exit()
@@ -21,11 +21,14 @@ print(td_sideview.data["anckle"].x[143])
 print(td_sideview.data["lHindfingers"].x[-1])
 
 try:
-    experiment_vid = Data.VideoData(data_name="Experiment video", file_path="./Videos/Dual_side_and_ventral_Mouse22_CnF_1wPostSCI_Test_Corridor_Left_Run1DLC_resnet50_Corridor_sideviewJul22shuffle1_1030000_labeled.mp4")
+    vid_sideview = Data.VideoData(data_name="Side view video", file_path="./Videos/Sideview_mouse 35_Run_1.mp4")
+    vid_ventral = Data.VideoData(data_name="Ventral view video", file_path="./Videos/Ventralview_mouse 35_Run_1.mp4")
 except Data.DataFileException as e:
     print(e)
     exit()
 
-experiment_vid.show_frame(0)
+td_sideview.data["head"].show_frame(0)
+vid_sideview.calibrate(0, "head", td_sideview.data["head"].x, td_sideview.data["head"].y)
+vid_sideview.show_frame(0)
 
 #world_frame = WF.WorldFrame()

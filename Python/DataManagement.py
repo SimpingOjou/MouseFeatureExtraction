@@ -47,6 +47,9 @@ class BodyPart:
         self.y = []
         self.likelihood = []
 
+    def show_frame(self, frame_num):
+        print(f"({self.x[frame_num]}, {self.y[frame_num]}) - {self.likelihood[frame_num]}")
+
 # Class managing the tracking data
 class TrackingData(Data):
     # File types allowed when asking the user to pick the data file
@@ -164,21 +167,62 @@ class VideoData(Data):
         # Calculate the duration of the video in seconds
         self.duration = self.frame_count / self.fps
 
+        # Coordinate pointed on an image
+        self.pointed_coord = None
 
-    def show_frame(self, frame_num):
+    def calibrate(self, frame_num, pos_to_point_at_name, expected_x, expected_y):
+        self.pointed_coord = None
+
+        while self.pointed_coord is None:
+            self.show_frame(frame_num, img_name="Point at " + pos_to_point_at_name, mouse_callback_func=self.__get_point_click_event)
+
+        print(self.pointed_coord)
+
+        
+
+
+
+    def show_frame(self, frame_num, img_name=None, mouse_callback_func=None):
         # Set the video to the required frame
         self.vidcap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
 
+        # Try to read the frame
         success, image = self.vidcap.read()
 
         # If frame read successfully
         if success:
+            # Auto generate the image name if not given
+            if img_name is None:
+                img_name = self.file_name+' frame '+ str(frame_num)
+
             #Display the resulting frame
-            cv2.imshow(self.file_name+' frame '+ str(frame_num),image)
-            cv2.waitKey()
+            cv2.imshow(img_name, image)
+
+            # Set the mouse handler for the image if needed
+            if mouse_callback_func is not None:
+                cv2.setMouseCallback(img_name, 
+                                     lambda *args, **kwargs: mouse_callback_func(image, img_name, *args, **kwargs))
+
+            cv2.waitKey(0)
             cv2.destroyAllWindows()
         else:
             print("Failed to read the frame " + str(frame_num) + " from the video file at " + self.file_path)
+
+    def __get_point_click_event(self, 
+                                  image, img_name, 
+                                  event, x, y, flags, params):
+        # checking for left mouse clicks 
+        if event == cv2.EVENT_LBUTTONDOWN: 
+            img = image.copy()
+
+            print(x, ' ', y) 
+
+            # Set the pointed coordinates
+            self.pointed_coord = (x,y)
+
+            img = cv2.circle(img, (x,y), radius=0, color=(255, 0, 0), thickness=-1)
+
+            cv2.imshow(img_name, img)
 
     def __del__(self):
         # Release the video when deleting the instance
