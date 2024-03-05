@@ -197,23 +197,20 @@ class VideoData(Data):
     def calibrate(self, frame_num, 
                   pos1_to_point_at_name, expected_coord_1,
                   pos2_to_point_at_name, expected_coord_2):
+        
+        # Reset the calibration parameters
+        self.calibration_factor_x = 1
+        self.calibration_factor_y = 1
+        self.origin_screen_x = 0
+        self.origin_screen_y = 0
+        self.origin_tracking_x = 0
+        self.origin_tracking_y = 0
+
         # Point the first coordinates
-        self.pointed_coord = None
-
-        while self.pointed_coord is None:
-            self.show_frame(frame_num, img_name="Point at " + pos1_to_point_at_name, mouse_callback_func=self.__get_point_click_event)
-
-        pointed_x1 = self.pointed_coord[0]
-        pointed_y1 = self.pointed_coord[1]
+        pointed_x1, pointed_y1 = self.point_at(frame_num, window_name="Point at " + pos1_to_point_at_name)
 
         # Point the second coordinates
-        self.pointed_coord = None
-
-        while self.pointed_coord is None:
-            self.show_frame(frame_num, img_name="Point at " + pos2_to_point_at_name, mouse_callback_func=self.__get_point_click_event)
-
-        pointed_x2 = self.pointed_coord[0]
-        pointed_y2 = self.pointed_coord[1]
+        pointed_x2, pointed_y2 = self.point_at(frame_num, window_name="Point at " + pos2_to_point_at_name)
 
         # Calculate the transformation from tracking data screen coordinates to current video screen coordinates
         expected_x1, expected_y1 = expected_coord_1
@@ -230,6 +227,7 @@ class VideoData(Data):
         self.origin_tracking_y = expected_y1
 
 
+    # Converts the coordinates from screen space to tracking data space (ie with the same origin,... as the tracking data)
     def to_tracking_space(self, coord):
         tracked_space_pointed_x = self.origin_tracking_x + self.calibration_factor_x * (coord[0] - self.origin_screen_x)
         tracked_space_pointed_y = self.origin_tracking_y + self.calibration_factor_y * (coord[1] - self.origin_screen_y)
@@ -238,16 +236,21 @@ class VideoData(Data):
 
 
     # Shows the frame frame_num of the video, in a window named window_name (if provided, otherwise auto generated)
-    # And allow the user to click on a point, before returning the coordinates of the click
-    # in the same screen space as the tracked data
+    # And allow the user to click on a point, before returning the coordinates of the click in the screen space
     def point_at(self, frame_num, window_name=None):
-        # Point the first coordinates
+        # Reset the pointed coordinates value and last key pressed
         self.pointed_coord = None
+        key_pressed = None
 
-        while self.pointed_coord is None:
-            self.show_frame(frame_num, img_name=window_name, mouse_callback_func=self.__get_point_click_event)
+        # While there is no pointed coordinates AND the user didn't close the window
+        while self.pointed_coord is None and key_pressed != -1:
+            key_pressed = self.show_frame(frame_num, img_name=window_name, mouse_callback_func=self.__get_point_click_event)
 
-        return self.to_tracking_space(self.pointed_coord)
+        # If the user closed the window without pointing, exit the program
+        if self.pointed_coord == None:
+            exit()
+
+        return self.pointed_coord
     
 
     # Shows the frame frame_num of the video, in a window named img_name (if provided, otherwise auto generated name)
@@ -259,24 +262,29 @@ class VideoData(Data):
         # Try to read the frame
         success, image = self.vidcap.read()
 
-        # If frame read successfully
-        if success:
-            # Auto generate the image name if not given
-            if img_name is None:
-                img_name = self.file_name+' frame '+ str(frame_num)
-
-            #Display the resulting frame
-            cv2.imshow(img_name, image)
-
-            # Set the mouse handler for the image if needed
-            if mouse_callback_func is not None:
-                cv2.setMouseCallback(img_name, 
-                                     lambda *args, **kwargs: mouse_callback_func(image, img_name, *args, **kwargs))
-
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        else:
+        # If the frame couldn't be read
+        if not success:
             print("Failed to read the frame " + str(frame_num) + " from the video file at " + self.file_path)
+            return None
+
+        # Auto generate the image name if not given
+        if img_name is None:
+            img_name = self.file_name+' frame '+ str(frame_num)
+
+        #Display the resulting frame
+        cv2.imshow(img_name, image)
+
+        # Set the mouse handler for the image if needed
+        if mouse_callback_func is not None:
+            cv2.setMouseCallback(img_name, 
+                                    lambda *args, **kwargs: mouse_callback_func(image, img_name, *args, **kwargs))
+
+        # Wait for a key press and return it after closing the window
+        key_pressed = cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+        return key_pressed
+            
 
 
     # Callback function allowing the user to point and click on the displayed image
