@@ -10,6 +10,8 @@ import os
 import csv
 import cv2
 
+from math import dist
+
 
 class DataFileException(Exception):
     """Raise for errors when attempting to read a data file"""
@@ -180,6 +182,21 @@ class VideoData(Data):
         self.origin_screen_x = 0
         self.origin_screen_y = 0
 
+        # Default focal length of the camera
+        self.focal_length = None
+
+    
+    # Estimates the focal length by pointing at two marks at distance_camera_marks from the camera
+    # and separated by a distance of distance_btw_marks,
+    def estimate_focal_length(self, frame_num, distance_camera_marks, world_distance_btw_marks):
+        # Get the 2 marks' position
+        pointed_coord_1 = self.point_at(frame_num, window_name="Point at the first mark")
+        pointed_coord_2 = self.point_at(frame_num, window_name="Point at the second mark")
+
+        screen_dist_btw_marks = dist(pointed_coord_1, pointed_coord_2)
+
+        self.focal_length = distance_camera_marks * screen_dist_btw_marks / world_distance_btw_marks
+
 
     # Setup the calibration paremeters to adjust for variations between the video and the tracked points
     def calibrate(self, frame_num, pos_to_point_at_name, expected_coord):
@@ -208,6 +225,7 @@ class VideoData(Data):
 
     # Shows the frame frame_num of the video, in a window named window_name (if provided, otherwise auto generated)
     # And allow the user to click on a point, before returning the coordinates of the click in the screen space
+    # The coordinates are returned in tracking data frame
     def point_at(self, frame_num, window_name=None):
         # Reset the pointed coordinates value and last key pressed
         self.pointed_coord = None
@@ -218,10 +236,10 @@ class VideoData(Data):
             key_pressed = self.show_frame(frame_num, img_name=window_name, mouse_callback_func=self.__get_point_click_event)
 
         # If the user closed the window without pointing, exit the program
-        if self.pointed_coord == None:
+        if self.pointed_coord is None or key_pressed == -1:
             exit()
 
-        return self.pointed_coord
+        return self.to_tracking_space(self.pointed_coord)
     
 
     # Shows the frame frame_num of the video, in a window named img_name (if provided, otherwise auto generated name)
@@ -283,5 +301,4 @@ class VideoData(Data):
         # Release the video when deleting the instance
         if hasattr(self, 'vidcap'):
             self.vidcap.release()
-    
     

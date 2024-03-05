@@ -23,14 +23,19 @@ vid_ventral.calibrate(frame_num, "head", td_ventralview.data["head"].get_coord_a
 # td_sideview.data["head"].print_data_at_frame(frame_num)
 # td_ventralview.data["head"].print_data_at_frame(frame_num)
 
-coord = vid_sideview.point_at(frame_num, "Test point")
-tracked_space_coord = vid_sideview.to_tracking_space(coord)
-
+# Estimate the focal length of the cameras
+distance_side_cam_marks = 1
+distance_ventral_cam_marks = 1
+distance_btw_marks = 0.5
+vid_sideview.estimate_focal_length(frame_num, distance_side_cam_marks, distance_btw_marks)
+vid_ventral.estimate_focal_length(frame_num, distance_ventral_cam_marks, distance_btw_marks)
 
 
 # Get the marked coordinate
-# mark_screen_coord_side = vid_sideview.point_at(frame_num, "Point at the mark on the side view camera")
-# mark_screen_coord_ventral = vid_ventral.point_at(frame_num, "Point at the mark on the ventral view camera")
+mark_screen_coord_side = vid_sideview.point_at(frame_num, "Point at the mark on the side view camera")
+mark_screen_coord_ventral = vid_ventral.point_at(frame_num, "Point at the mark on the ventral view camera")
+
+
 
 
 # Print the x coordinate of the head at frame 200 
