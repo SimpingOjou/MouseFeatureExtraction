@@ -19,7 +19,7 @@ class DataFileException(Exception):
 
 
 # Base class for opening data files
-class Data:
+class OpenableDataFile:
     def __init__(self, data_name, file_path, initial_dir, file_types, data_ext):
         # Ask to pick a path if none is given
         if file_path is None:
@@ -51,6 +51,7 @@ class BodyPart:
         self.name = bodypart_name
         self.x = []
         self.y = []
+        self.z = []
         self.likelihood = []
 
     # Returns the coordinates (x,y) of the tracked body part at frame frame_num
@@ -59,12 +60,15 @@ class BodyPart:
 
     # Print on the command line the data contained in the limb at frame frame_num
     def print_data_at_frame(self, frame_num):
-        print(f"({self.x[frame_num]}, {self.y[frame_num]}) - {self.likelihood[frame_num]}")
+        if len(self.z) > 0:
+            print(f"({self.x[frame_num]}, {self.y[frame_num]}, {self.z[frame_num]}) - {self.likelihood[frame_num]}")
+        else:
+            print(f"({self.x[frame_num]}, {self.y[frame_num]}) - {self.likelihood[frame_num]}")
 
 
 
 # Class managing the tracking data
-class TrackingData(Data):
+class TrackingData(OpenableDataFile):
     # File types allowed when asking the user to pick the data file
     filetypes = (('CSV', '*.csv'),('All files', '*.*'))
     # Initial directory when asking the user to pick the data file
@@ -72,17 +76,27 @@ class TrackingData(Data):
     # Extensions allowed for a data file
     data_ext = [".csv",".txt"]
 
-    # Name of the corresponding columns
+    # Name of the corresponding columns on the traking file
     x_col_name = "x"
     y_col_name = "y"
     likelihood_col_name = "likelihood"
 
-    def __init__(self, data_name, file_path=None, data_delimiter=',', bodypart_row_name="bodyparts", coord_row_name="coords"):
-        # Get the data from the file
-        super().__init__(data_name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
+    def __init__(self, data_name):
+        self.name = data_name
 
         # Create the tracking data dictionnary
         self.data = dict()
+
+
+    # Converts the data from the 2 camera views to the world frame, using world_frame
+    def get_3D_data(self, world_frame, side_tracking_data, ventral_tracking_data):
+        pass
+
+    
+    # Load the data from a CSV file (ask the user for the file if no file_path is provided)
+    def get_data_from_file(self, file_path=None, data_delimiter=',', bodypart_row_name="bodyparts", coord_row_name="coords"):
+        # Get the data from the file
+        super().__init__(self.name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
 
         # Open the data file and extract the data
         with open(self.file_path, mode="r") as data_file:
@@ -151,7 +165,7 @@ class TrackingData(Data):
 
 
 # Class managing video data
-class VideoData(Data):
+class VideoData(OpenableDataFile):
     # File types allowed when asking the user to pick the data file
     filetypes = (('mp4', '*.mp4'), ('avi', '*.avi'),('All files', '*.*'))
     # Initial directory when asking the user to pick the data file

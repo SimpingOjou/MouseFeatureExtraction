@@ -2,11 +2,13 @@ import DataManagement as Data
 import WorldFrame as WF
 import GUI as UI
 
+td_sideview = Data.TrackingData(data_name="Side view tracking")
+td_ventralview = Data.TrackingData(data_name="Ventral view tracking")
 
 try:
     # Load the tracking datas
-    td_sideview = Data.TrackingData(data_name="Side view tracking", file_path="./Data/Sideview_mouse 35_Run_1.csv")
-    td_ventralview = Data.TrackingData(data_name="Ventral view tracking", file_path="./Data/Ventralview_mouse 35_Run_1.csv")
+    td_sideview.get_data_from_file(file_path="./Data/Sideview_mouse 35_Run_1.csv")
+    td_ventralview.get_data_from_file(file_path="./Data/Ventralview_mouse 35_Run_1.csv")
 
     # Load the video datas
     vid_sideview = Data.VideoData(data_name="Side view video", file_path="./Videos/Sideview_mouse 35_Run_1.mp4")
@@ -15,13 +17,14 @@ except Data.DataFileException as e:
     print(e)
     exit()
 
+# td_sideview.data["head"].print_data_at_frame(0)
+# td_ventralview.data["head"].print_data_at_frame(0)
+
 # Calibrate the video datas to compensate for margins,... between the tracked data and the videos
 frame_num = 0
-vid_sideview.calibrate(frame_num, "head", td_sideview.data["head"].get_coord_at_frame(frame_num))
-vid_ventral.calibrate(frame_num, "head", td_ventralview.data["head"].get_coord_at_frame(frame_num))
-                       
-# td_sideview.data["head"].print_data_at_frame(frame_num)
-# td_ventralview.data["head"].print_data_at_frame(frame_num)
+vid_sideview.calibrate(frame_num, "head on side view", td_sideview.data["head"].get_coord_at_frame(frame_num))
+vid_ventral.calibrate(frame_num, "head on ventral view", td_ventralview.data["head"].get_coord_at_frame(frame_num))
+
 
 # Estimate the focal length of the cameras
 distance_side_cam_marks = 1
