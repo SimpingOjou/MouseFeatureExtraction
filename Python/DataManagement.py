@@ -283,28 +283,5 @@ class VideoData(Data):
         # Release the video when deleting the instance
         if hasattr(self, 'vidcap'):
             self.vidcap.release()
-
-    # get the time variables
-    def get_time(self, sampling):
-        frames = len(self.data["head"].x)
-        time = frames / sampling
-
-        return frames, time
-
-    # converting to bottom right origin
-    def conversion(self, cf):
-        x_max = float(self.data["head"].x[0])
-        y_max = float(self.data["head"].x[0])
-
-        for part in self.data:
-            temp = max([float(x) for x in self.data[part].x])
-            if temp > x_max:
-                x_max = temp
-
-            temp = max([float(y) for y in self.data[part].y])
-            if temp > y_max:
-                y_max = temp
-
-        for part in self.data:
-            self.data[part].x = [(x_max - float(x)) / cf for x in self.data[part].x]
-            self.data[part].y = [(y_max - float(y)) / cf for y in self.data[part].y]
+    
+    
