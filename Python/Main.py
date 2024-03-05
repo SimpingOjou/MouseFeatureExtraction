@@ -5,28 +5,26 @@ import GUI as UI
 
 try:
     # Load the tracking datas
-    td_sideview = Data.TrackingData(data_name="Side view tracking", file_path="./Data/Dual_side_and_ventral_Mouse22_CnF_PreSCI_Test_Corridor_Left_Run2DLC_resnet50_Corridor_sideviewJul22shuffle1_1030000_filtered.csv")
-    #td_ventralview = Data.TrackingData(data_name="Ventral view tracking", file_path="./Data/Ventralview_mouse 35_Run_1.csv")
+    td_sideview = Data.TrackingData(data_name="Side view tracking", file_path="./Data/Sideview_mouse 35_Run_1.csv")
+    td_ventralview = Data.TrackingData(data_name="Ventral view tracking", file_path="./Data/Ventralview_mouse 35_Run_1.csv")
 
     # Load the video datas
-    vid_sideview = Data.VideoData(data_name="Side view video", file_path="./Videos/Dual_side_and_ventral_Mouse22_CnF_PreSCI_Test_Corridor_Left_Run1DLC_resnet50_Corridor_sideviewJul22shuffle1_1030000_filtered_labeled.mp4")
-    #vid_ventral = Data.VideoData(data_name="Ventral view video", file_path="./Videos/Ventralview_mouse 35_Run_1.mp4")
+    vid_sideview = Data.VideoData(data_name="Side view video", file_path="./Videos/Sideview_mouse 35_Run_1.mp4")
+    vid_ventral = Data.VideoData(data_name="Ventral view video", file_path="./Videos/Ventralview_mouse 35_Run_1.mp4")
 except Data.DataFileException as e:
     print(e)
     exit()
 
 # Calibrate the video datas to compensate for margins,... between the tracked data and the videos
-frame_num = 10
-vid_sideview.calibrate(frame_num, "head", td_sideview.data["head"].get_coord_at_frame(frame_num), 
-                       "tail tip", td_sideview.data["tail 100"].get_coord_at_frame(frame_num))
-# vid_ventral.calibrate(frame_num, "head", td_ventralview.data["head"].get_coord_at_frame(frame_num), 
-#                       "left hind fingers", td_ventralview.data["lHindfingers"].get_coord_at_frame(frame_num))
+frame_num = 0
+vid_sideview.calibrate(frame_num, "head", td_sideview.data["head"].get_coord_at_frame(frame_num))
+vid_ventral.calibrate(frame_num, "head", td_ventralview.data["head"].get_coord_at_frame(frame_num))
                        
-td_sideview.data["head"].print_data_at_frame(frame_num)
-#td_ventralview.data["head"].print_data_at_frame(frame_num)
+# td_sideview.data["head"].print_data_at_frame(frame_num)
+# td_ventralview.data["head"].print_data_at_frame(frame_num)
 
 coord = vid_sideview.point_at(frame_num, "Test point")
-print(vid_sideview.to_tracking_space(coord))
+tracked_space_coord = vid_sideview.to_tracking_space(coord)
 
 
 

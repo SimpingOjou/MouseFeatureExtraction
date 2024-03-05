@@ -185,52 +185,31 @@ class VideoData(Data):
         self.pointed_coord = None
 
         # Default calibration value
-        self.calibration_factor_x = 1
-        self.calibration_factor_y = 1
         self.origin_screen_x = 0
         self.origin_screen_y = 0
-        self.origin_tracking_x = 0
-        self.origin_tracking_y = 0
 
 
-    # Setup the calibration factors to adjust for variations between the video and the tracked points
-    def calibrate(self, frame_num, 
-                  pos1_to_point_at_name, expected_coord_1,
-                  pos2_to_point_at_name, expected_coord_2):
-        
+    # Setup the calibration paremeters to adjust for variations between the video and the tracked points
+    def calibrate(self, frame_num, pos_to_point_at_name, expected_coord):
         # Reset the calibration parameters
-        self.calibration_factor_x = 1
-        self.calibration_factor_y = 1
         self.origin_screen_x = 0
         self.origin_screen_y = 0
-        self.origin_tracking_x = 0
-        self.origin_tracking_y = 0
 
-        # Point the first coordinates
-        pointed_x1, pointed_y1 = self.point_at(frame_num, window_name="Point at " + pos1_to_point_at_name)
-
-        # Point the second coordinates
-        pointed_x2, pointed_y2 = self.point_at(frame_num, window_name="Point at " + pos2_to_point_at_name)
+        # Ask the user to point at the required tracking data
+        pointed_x, pointed_y = self.point_at(frame_num, window_name="Point at " + pos_to_point_at_name)
 
         # Calculate the transformation from tracking data screen coordinates to current video screen coordinates
-        expected_x1, expected_y1 = expected_coord_1
-        expected_x2, expected_y2 = expected_coord_2
+        expected_x, expected_y = expected_coord
 
-        # Moving 1 unit along x on the video corresponds to moving calibration_factor_x units on the tracking data
-        self.calibration_factor_x = (expected_x2 - expected_x1) / (pointed_x2 - pointed_x1)
-        self.calibration_factor_y = (expected_y2 - expected_y1) / (pointed_y2 - pointed_y1)
-
-        # Determine a random origin point
-        self.origin_screen_x = pointed_x1
-        self.origin_screen_y = pointed_y1
-        self.origin_tracking_x = expected_x1
-        self.origin_tracking_y = expected_y1
+        # Determine the origin point of the tracking data
+        self.origin_screen_x = pointed_x - expected_x
+        self.origin_screen_y = pointed_y - expected_y
 
 
     # Converts the coordinates from screen space to tracking data space (ie with the same origin,... as the tracking data)
     def to_tracking_space(self, coord):
-        tracked_space_pointed_x = self.origin_tracking_x + self.calibration_factor_x * (coord[0] - self.origin_screen_x)
-        tracked_space_pointed_y = self.origin_tracking_y + self.calibration_factor_y * (coord[1] - self.origin_screen_y)
+        tracked_space_pointed_x = abs(coord[0] - self.origin_screen_x)
+        tracked_space_pointed_y = abs(coord[1] - self.origin_screen_y)
 
         return tracked_space_pointed_x, tracked_space_pointed_y
 
