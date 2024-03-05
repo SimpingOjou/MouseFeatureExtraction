@@ -31,11 +31,19 @@ vid_sideview.estimate_focal_length(frame_num, distance_side_cam_marks, distance_
 vid_ventral.estimate_focal_length(frame_num, distance_ventral_cam_marks, distance_btw_marks)
 
 
-# Get the marked coordinate
+# Get the mark's coordinate in the same frame as the tracking data
 mark_screen_coord_side = vid_sideview.point_at(frame_num, "Point at the mark on the side view camera")
 mark_screen_coord_ventral = vid_ventral.point_at(frame_num, "Point at the mark on the ventral view camera")
 
 
+# Convert from 2D to 3D
+side_ventral_cam_dist_vertical = 2
+side_cam_screen_resolution = (640, 180)
+ventral_cam_screen_resolution = (640, 180)
+wf = WF.WorldFrame(distance_side_cam_marks, distance_ventral_cam_marks, side_ventral_cam_dist_vertical, 
+                   mark_screen_coord_side, mark_screen_coord_ventral, 
+                   vid_sideview.focal_length, vid_ventral.focal_length, 
+                   side_cam_screen_resolution, ventral_cam_screen_resolution)
 
 
 # Print the x coordinate of the head at frame 200 
@@ -47,7 +55,3 @@ print(td_sideview.data["anckle"].x[143])
 # Print the likelihood for the left hindfinger tracking at the last frame 
 print(td_sideview.data["lHindfingers"].x[-1])
 
-
-
-
-#world_frame = WF.WorldFrame()
