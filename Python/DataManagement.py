@@ -127,32 +127,24 @@ class TrackingData(Data):
                         bodypart = all_bodyparts[i]
                         self.data[bodypart].likelihood.append(float(row[i]))
 
-    # Get the time variables
-    def get_time(self, sampling):
+    # Returns the total frame number of the tracking data
+    def get_total_frames(self):
         key = next(iter(self.data))
-        frames = len(self.data[key].x)
-        total_time = frames / sampling
+        return len(self.data[key].x)
 
-        return frames, total_time
+    # Returns the total time of the tracking data
+    def get_total_time(self, sampling):
+        return self.get_total_frames() / sampling
 
-    # Converting the data to bottom right origin
-    def convert_origin(self, cf):
-        key = next(iter(self.data))
-        x_max = self.data[key].x[0]
-        y_max = self.data[key].x[0]
+    # Converting the data to the opposite origin 
+    # (upper-left to bottom-right, upper-right to bottom-left, ...)
+    def reverse_origin(self):
+        x_max = max([max(bp.x) for bp in self.data.values()])
+        y_max = max([max(bp.y) for bp in self.data.values()])
 
         for part in self.data:
-            temp = max([x for x in self.data[part].x])
-            if temp > x_max:
-                x_max = temp
-
-            temp = max([y for y in self.data[part].y])
-            if temp > y_max:
-                y_max = temp
-
-        for part in self.data:
-            self.data[part].x = [(x_max - x) / cf for x in self.data[part].x]
-            self.data[part].y = [(y_max - y) / cf for y in self.data[part].y]
+            self.data[part].x = [(x_max - x) for x in self.data[part].x]
+            self.data[part].y = [(y_max - y) for y in self.data[part].y]
 
 
 
