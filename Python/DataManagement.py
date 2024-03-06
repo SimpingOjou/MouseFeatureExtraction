@@ -9,6 +9,7 @@ from GUI import GUI
 import os
 import csv
 import cv2
+import numpy as np
 
 from math import dist
 
@@ -134,14 +135,19 @@ class TrackingData(OpenableDataFile):
                     for i in x_col:
                         bodypart = all_bodyparts[i]
                         self.data[bodypart].x.append(float(row[i]))
-                    
+
                     for i in y_col:
                         bodypart = all_bodyparts[i]
                         self.data[bodypart].y.append(float(row[i]))
-                    
+
                     for i in likelihood_col:
                         bodypart = all_bodyparts[i]
                         self.data[bodypart].likelihood.append(float(row[i]))
+
+            for bodypart in all_bodyparts[1:]:
+                self.data[bodypart].x = np.array(self.data[bodypart].x)
+                self.data[bodypart].y = np.array(self.data[bodypart].y)
+                self.data[bodypart].likelihood = np.array(self.data[bodypart].likelihood)
 
     # Returns the total frame number of the tracking data
     def get_total_frames(self):
@@ -151,6 +157,10 @@ class TrackingData(OpenableDataFile):
     # Returns the total time of the tracking data
     def get_total_time(self, sampling):
         return self.get_total_frames() / sampling
+    
+    # Returns the time divided in timesteps as an array
+    def get_timesteps(self, sampling):
+        return np.linspace(0, self.get_total_time(sampling), num = self.get_total_frames()) 
 
     # Converting the data to the opposite origin 
     # (upper-left to bottom-right, upper-right to bottom-left, ...)
