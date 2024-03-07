@@ -172,6 +172,17 @@ class TrackingData(OpenableDataFile):
             self.data[part].x = [(x_max - x) for x in self.data[part].x]
             self.data[part].y = [(y_max - y) for y in self.data[part].y]
 
+    # Cuts out the first and last steps
+    def cut_step(self, lower_t, upper_t):
+        for bodypart in self.data:
+            self.data[bodypart].x = self.data[bodypart].x[lower_t:upper_t + 1]
+            self.data[bodypart].y = self.data[bodypart].y[lower_t:upper_t + 1]
+            self.data[bodypart].likelihood = self.data[bodypart].likelihood[lower_t:upper_t + 1]
+            
+    # Cut time 
+    def cut_time(self, lower_t, upper_t, sampling):
+        return self.get_timesteps(sampling)[lower_t:upper_t + 1]
+
 
 
 # Class managing video data
