@@ -14,10 +14,19 @@ import DataManagement as Data
 plt.rcParams["text.usetex"] = True
 
 class Steps:
-    def __init__(self, td_data, sampling):
+    def __init__(self, td_data, sampling:int = 199, min_peak_dist:int = 15, peak_prom:int = (0.65, None),\
+                flip:bool = False, peak_range:int = 10, lower_quartile:int = 20, upper_quartile:int = 80):
         self.td_data = td_data
         self.sampling = sampling
         self.figure_number = 0
+
+        self.find_borders(min_peak_dist, peak_prom, flip)
+        self.cut_halfsteps(min_peak_dist, peak_prom, flip)
+        self.find_peaks(min_peak_dist, peak_prom, not flip)
+        self.find_touchdowns()
+        self.find_swings(lower_quartile, upper_quartile, peak_range)
+        self.plot_velocities()
+        self.plot_trajectory(lock_plot=True)
 
     # Finding the borders
     def find_borders(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):  
@@ -150,11 +159,3 @@ except Data.DataFileException as e:
     print(e)
     exit()
 s = Steps(td_sideview, sampling)
-
-s.find_borders()
-s.cut_halfsteps()
-s.find_peaks(flip=True)
-s.find_touchdowns()
-s.find_swings()
-s.plot_velocities()
-s.plot_trajectory(lock_plot=True)
