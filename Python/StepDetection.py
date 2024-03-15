@@ -38,11 +38,11 @@ class Steps:
     
     # Cut halfsteps by looking at first and last touchdown
     def _cut_halfsteps(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):
-        lower_t = min([min(self.borders_fin), min(self.borders_paw)])
-        upper_t = max([max(self.borders_fin), max(self.borders_paw)])
+        self.lower_t = min([min(self.borders_fin), min(self.borders_paw)])
+        self.upper_t = max([max(self.borders_fin), max(self.borders_paw)])
 
-        self.td_data.cut_step(lower_t, upper_t)
-        self.td_data.cut_time(lower_t, upper_t, sampling)
+        self.td_data.cut_step(self.lower_t, self.upper_t)
+        self.td_data.cut_time(self.lower_t, self.upper_t, self.sampling)
 
         self._find_borders(dist, prom, flip)
 
@@ -95,6 +95,15 @@ class Steps:
     def get_steps(self):
         return np.diff(self.touchdowns)
     
+    def get_step_times(self):
+        return [(step + self.lower_t)/self.sampling for step in self.get_steps()]
+
+    def get_swing_times(self):
+        return [ (swing + self.lower_t)/self.sampling for swing in self.swings]
+
+    def get_touchdown_times(self):
+        return [ (td + self.lower_t)/self.sampling for td in self.touchdowns]
+
     # Returns true if index i is distant a check_range interval from peaks 
     def _check_before_peaks(self, i:int, peak, check_range:int=10):
         if i + check_range > peak and i < peak:
