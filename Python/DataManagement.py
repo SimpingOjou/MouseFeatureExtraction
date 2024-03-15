@@ -48,12 +48,12 @@ class OpenableDataFile:
 
 # Class containing the data of a body part for a single frame
 class BodyPart:
-    def __init__(self, bodypart_name):
+    def __init__(self, x_data, y_data, likelihood_data, bodypart_name):
         self.name = bodypart_name
-        self.x = []
-        self.y = []
-        self.z = []
-        self.likelihood = []
+        self.x = np.array(x_data)
+        self.y = np.array(y_data)
+        self.z = np.array([])
+        self.likelihood = np.array(likelihood_data)
 
     # Returns the coordinates (x,y) of the tracked body part at frame frame_num
     def get_coord_at_frame(self, frame_num):
@@ -109,12 +109,16 @@ class TrackingData(OpenableDataFile):
             y_col = []
             likelihood_col = []
 
+            x_data : dict[str, list] = dict()
+            y_data : dict[str, list] = dict()
+            likelihood_data : dict[str, list] = dict()
+
             # Read each row of the data file
             for row in csv_reader:
                 # If it's the bodyparts row, create the bodyparts in the data dictionnary
                 if row[0] == bodypart_row_name:
                     for bodypart in row[1:]:
-                        self.data[bodypart] = BodyPart(bodypart)
+                        #self.data[bodypart] = BodyPart(bodypart)
                         all_bodyparts.append(bodypart)
 
                 # If it's the coordinate (x,y,likelihood) column, save the indices
@@ -134,20 +138,33 @@ class TrackingData(OpenableDataFile):
                 elif row[0].isdigit():
                     for i in x_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].x.append(float(row[i]))
+                        #self.data[bodypart].x.append(float(row[i]))
+                        if not bodypart in x_data.keys():
+                            x_data[bodypart] = [float(row[i])]
+                        else:
+                            x_data[bodypart].append(float(row[i]))
 
                     for i in y_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].y.append(float(row[i]))
+                        #self.data[bodypart].y.append(float(row[i]))
+                        if not bodypart in y_data.keys():
+                            y_data[bodypart] = [float(row[i])]
+                        else:
+                            y_data[bodypart].append(float(row[i]))
 
                     for i in likelihood_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].likelihood.append(float(row[i]))
+                        #self.data[bodypart].likelihood.append(float(row[i]))
+                        if not bodypart in likelihood_data.keys():
+                            likelihood_data[bodypart] = [float(row[i])]
+                        else:
+                            likelihood_data[bodypart].append(float(row[i]))
 
             for bodypart in all_bodyparts[1:]:
-                self.data[bodypart].x = np.array(self.data[bodypart].x)
-                self.data[bodypart].y = np.array(self.data[bodypart].y)
-                self.data[bodypart].likelihood = np.array(self.data[bodypart].likelihood)
+                # self.data[bodypart].x = np.array(self.data[bodypart].x)
+                # self.data[bodypart].y = np.array(self.data[bodypart].y)
+                # self.data[bodypart].likelihood = np.array(self.data[bodypart].likelihood)
+                self.data[bodypart] = BodyPart(x_data[bodypart], y_data[bodypart], likelihood_data[bodypart], bodypart)
 
     # Returns the total frame number of the tracking data
     def get_total_frames(self):
@@ -169,8 +186,8 @@ class TrackingData(OpenableDataFile):
         y_max = max([max(bp.y) for bp in self.data.values()])
 
         for part in self.data:
-            self.data[part].x = [(x_max - x) for x in self.data[part].x]
-            self.data[part].y = [(y_max - y) for y in self.data[part].y]
+            self.data[part].x = x_max - self.data[part].x
+            self.data[part].y = y_max - self.data[part].y
 
     # Cuts out the first and last steps
     def cut_step(self, lower_t, upper_t):

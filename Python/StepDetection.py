@@ -8,28 +8,27 @@ Created on Sun Mar  3 23:19:00 2024
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
+from copy import deepcopy
 
 import DataManagement as Data
 
-plt.rcParams["text.usetex"] = True
+#plt.rcParams["text.usetex"] = True
 
 class Steps:
-    def __init__(self, td_data, sampling:int = 199, min_peak_dist:int = 15, peak_prom:int = (0.65, None),\
+    def __init__(self, td_data:Data.TrackingData, sampling:int = 199, min_peak_dist:int = 15, peak_prom:int = (0.65, None),\
                 flip:bool = False, peak_range:int = 10, lower_quartile:int = 20, upper_quartile:int = 80):
-        self.td_data = td_data
+        self.td_data = deepcopy(td_data)
         self.sampling = sampling
         self.figure_number = 0
 
-        self.find_borders(min_peak_dist, peak_prom, flip)
-        self.cut_halfsteps(min_peak_dist, peak_prom, flip)
-        self.find_peaks(min_peak_dist, peak_prom, not flip)
-        self.find_touchdowns()
-        self.find_swings(lower_quartile, upper_quartile, peak_range)
-        self.plot_velocities()
-        self.plot_trajectory(lock_plot=True)
+        self._find_borders(min_peak_dist, peak_prom, flip)
+        self._cut_halfsteps(min_peak_dist, peak_prom, flip)
+        self._find_peaks(min_peak_dist, peak_prom, not flip)
+        self._find_touchdowns()
+        self._find_swings(lower_quartile, upper_quartile, peak_range)
 
     # Finding the borders
-    def find_borders(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):  
+    def _find_borders(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):  
         if flip:
             self.td_data.reverse_origin()
 
@@ -38,14 +37,14 @@ class Steps:
         self.borders_fin, b_fing = find_peaks(self.td_data.data["lHindfingers"].y, distance = dist, prominence = prom)
     
     # Cut halfsteps by looking at first and last touchdown
-    def cut_halfsteps(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):
+    def _cut_halfsteps(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):
         lower_t = min([min(self.borders_fin), min(self.borders_paw)])
         upper_t = max([max(self.borders_fin), max(self.borders_paw)])
 
         self.td_data.cut_step(lower_t, upper_t)
         self.td_data.cut_time(lower_t, upper_t, sampling)
 
-        self.find_borders(dist, prom, flip)
+        self._find_borders(dist, prom, flip)
 
         self.borders_paw = np.insert(self.borders_paw, 0, 0)
         self.borders_paw = np.append(self.borders_paw, len(self.td_data.data["lHindpaw"].y) - 1)
@@ -53,7 +52,7 @@ class Steps:
         self.borders_fin = np.append(self.borders_fin, len(self.td_data.data["lHindfingers"].y) - 1)
 
     # Finding the peaks
-    def find_peaks(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):
+    def _find_peaks(self, dist:int = 15, prom:int = (0.65, None), flip:bool = False):
         if flip:
             self.td_data.reverse_origin()
 
@@ -69,7 +68,7 @@ class Steps:
         return v_fing, v_paw
     
     # Touchdown detection by looking at the borders
-    def find_touchdowns(self):
+    def _find_touchdowns(self):
         self.touchdowns = []
 
         for i in range(len(self.borders_fin)):
@@ -79,16 +78,16 @@ class Steps:
                 self.touchdowns.append(self.borders_paw[i])
 
     # Swing detection with velocity, outliers, and paw condition
-    def find_swings(self, lower:int = 20, upper:int = 80, check_range:int=10):
+    def _find_swings(self, lower:int = 20, upper:int = 80, check_range:int=10):
         self.swings = []
         steps = self.get_steps()
         v_fing, v_paw = self.get_velocities()
 
         for i,td in enumerate(self.touchdowns[:-1]):
-            outliers = self.search_outliers(v_fing, lower, upper)
+            outliers = self._search_outliers(v_fing, lower, upper)
             # step_mean = np.mean(np.abs(v_fing[td:td+steps[i]])) not used bc percentiles work better
             for j in range(steps[i]):
-                if v_fing[td+j] in outliers and self.check_before_peaks(td+j, self.peaks_paw[i], check_range):
+                if v_fing[td+j] in outliers and self._check_before_peaks(td+j, self.peaks_paw[i], check_range):
                     self.swings.append(td+j)
                     break
     
@@ -97,14 +96,14 @@ class Steps:
         return np.diff(self.touchdowns)
     
     # Returns true if index i is distant a check_range interval from peaks 
-    def check_before_peaks(self, i:int, peak, check_range:int=10):
+    def _check_before_peaks(self, i:int, peak, check_range:int=10):
         if i + check_range > peak and i < peak:
             return True
         else:
             return False
     
     # Calculates outliers based on lower and upper percentiles
-    def search_outliers(self, data, lower:int = 20, upper:int = 80):
+    def _search_outliers(self, data, lower:int = 20, upper:int = 80):
         # Calculate the quartiles (a-th and b-th percentiles)
         q_low, q_up = np.percentile(data, lower), np.percentile(data, upper)
         # Calculate the interquartile range (IQR)
@@ -137,12 +136,12 @@ class Steps:
 
         plt.plot(self.td_data.data["lHindpaw"].y, label = "L hindpaw")
         plt.plot(self.td_data.data["lHindfingers"].y, label = "L hindfingers")
-        plt.plot(self.swings, np.array(self.td_data.data["lHindpaw"].y)[self.swings], "r^")
-        plt.plot(self.swings, np.array(self.td_data.data["lHindfingers"].y)[self.swings], "r^", label = "swings")
-        plt.plot(self.touchdowns, np.array(self.td_data.data["lHindfingers"].y)[self.touchdowns], "gv")
-        plt.plot(self.touchdowns, np.array(self.td_data.data["lHindpaw"].y)[self.touchdowns], "gv", label = "touchdowns")
-        plt.plot(self.peaks_paw, np.array(self.td_data.data["lHindpaw"].y)[self.peaks_paw], "b*")
-        plt.plot(self.peaks_fin, np.array(self.td_data.data["lHindfingers"].y)[self.peaks_fin], "b*", label = "peaks")
+        plt.plot(self.swings, self.td_data.data["lHindpaw"].y[self.swings], "r^")
+        plt.plot(self.swings, self.td_data.data["lHindfingers"].y[self.swings], "r^", label = "swings")
+        plt.plot(self.touchdowns, self.td_data.data["lHindfingers"].y[self.touchdowns], "gv")
+        plt.plot(self.touchdowns, self.td_data.data["lHindpaw"].y[self.touchdowns], "gv", label = "touchdowns")
+        plt.plot(self.peaks_paw, self.td_data.data["lHindpaw"].y[self.peaks_paw], "b*")
+        plt.plot(self.peaks_fin, self.td_data.data["lHindfingers"].y[self.peaks_fin], "b*", label = "peaks")
         plt.title("Swings and Touchdown detection")
         plt.xlabel("Frames")
         plt.ylabel("Height [cm]")
@@ -150,12 +149,17 @@ class Steps:
         plt.legend()
         plt.show()
 
-sampling = 199
-td_sideview = Data.TrackingData(data_name="Side view tracking")
-try:
-    # Load the tracking datas
-    td_sideview.get_data_from_file(file_path="C:/Users/Simone/Documents/DTU/Biomechanics/MouseFeatureExtraction/Data/Sideview_mouse 35_Run_1.csv")
-except Data.DataFileException as e:
-    print(e)
-    exit()
-s = Steps(td_sideview, sampling)
+if __name__=="__main__":
+    sampling = 199
+    td_sideview = Data.TrackingData(data_name="Side view tracking")
+    try:
+        # Load the tracking datas
+        td_sideview.get_data_from_file(file_path="./Data/Sideview_mouse 35_Run_1.csv")
+    except Data.DataFileException as e:
+        print(e)
+        exit()
+    
+    s = Steps(td_sideview, sampling)
+
+    s.plot_velocities()
+    s.plot_trajectory(lock_plot=True)
