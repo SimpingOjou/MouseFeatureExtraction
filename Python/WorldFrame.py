@@ -3,10 +3,10 @@ from math import sqrt, atan2, cos, sin
 #from math import abs
 
 class WorldFrame:
-    def __init__(self, cam1_mark_dist, cam2_mark_dist, cam1_cam2_dist, 
-                 mark_screen_coord_side, mark_screen_coord_ventral, 
-                 focal_length_side, focal_length_ventral, 
-                 screen_resolution_side, screen_resolution_ventral):
+    def __init__(self, cam1_mark_dist:float, cam2_mark_dist:float, cam1_cam2_dist:float, 
+                 mark_screen_coord_side:tuple[int, int], mark_screen_coord_ventral:tuple[int, int], 
+                 focal_length_side:float, focal_length_ventral:float, 
+                 screen_resolution_side:tuple[int, int], screen_resolution_ventral:tuple[int, int]):
         
         ## Save the parameters in the WorldFrameData object
         self.d1 = cam1_mark_dist
@@ -38,12 +38,12 @@ class WorldFrame:
 
         self.theta1 = atan2(self.h1, self.d1)
 
-    def to_3D(self, screen_coord_1, screen_coord_2):
+    def to_3D(self, screen_coord_side:tuple[int, int], screen_coord_ventral:tuple[int, int]):
         # Get the screen coordinates
-        x1_s = screen_coord_1[0]
-        y1_s = screen_coord_1[1]
-        x2_s = screen_coord_2[0]
-        y2_s = screen_coord_2[1]
+        x1_s = screen_coord_side[0]
+        y1_s = screen_coord_side[1]
+        x2_s = screen_coord_ventral[0]
+        y2_s = screen_coord_ventral[1]
 
         # Define the temporary variables
         ap = (cos(self.theta1)/self.f1) * (y1_s - self.H1/2) - sin(self.theta1)

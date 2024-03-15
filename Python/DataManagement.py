@@ -5,22 +5,31 @@ Created on Sun Mar  3 17:03:31 2024
 @author: walid
 """
 
+from matplotlib import animation
+import matplotlib.pyplot as plt
+import numpy as np
+
 from GUI import GUI
 import os
 import csv
 import cv2
 
 from math import dist
+from WorldFrame import WorldFrame
 
 
-class DataFileException(Exception):
+class GetDataException(Exception):
     """Raise for errors when attempting to read a data file"""
 
+
+# Check that all the elements in a list are equal
+def all_same(items):
+    return len(set(items)) < 2
 
 
 # Base class for opening data files
 class OpenableDataFile:
-    def __init__(self, data_name, file_path, initial_dir, file_types, data_ext):
+    def __init__(self, data_name:str, file_path:str, initial_dir:str, file_types, data_ext):
         # Ask to pick a path if none is given
         if file_path is None:
             ui = GUI()
@@ -28,7 +37,7 @@ class OpenableDataFile:
         
         # Check that the file exists
         if file_path == "" or not os.path.exists(file_path):
-            raise DataFileException("Error : '" + file_path + "' is not a valid file path")
+            raise GetDataException("Error : '" + file_path + "' is not a valid file path")
         
         # Save the file parameters in the object
         self.file_path = file_path
@@ -41,13 +50,13 @@ class OpenableDataFile:
 
         # Check that the file extension is valid
         if self.file_ext not in data_ext:
-            raise DataFileException("Error : '" + self.file_ext + "' is not a valid data extension")
+            raise GetDataException("Error : '" + self.file_ext + "' is not a valid data extension")
 
 
 
 # Class containing the data of a body part for a single frame
 class BodyPart:
-    def __init__(self, bodypart_name):
+    def __init__(self, bodypart_name:str):
         self.name = bodypart_name
         self.x = []
         self.y = []
@@ -55,15 +64,51 @@ class BodyPart:
         self.likelihood = []
 
     # Returns the coordinates (x,y) of the tracked body part at frame frame_num
-    def get_coord_at_frame(self, frame_num):
+    def get_2D_coord_at_frame(self, frame_num:int):
         return (self.x[frame_num], self.y[frame_num])
+    
+    # Returns the coordinates (x,y,z) of the tracked body part at frame frame_num
+    def get_3D_coord_at_frame(self, frame_num:int):
+        return (self.x[frame_num], self.y[frame_num], self.z[frame_num])
+    
+    # Returns true if the parameters have the same number of frames
+    def check_frame_equality(self):
+        return len(self.x) == len(self.y) and (len(self.likelihood)==0 or len(self.likelihood) == len(self.x)) and (len(self.z) == 0 or len(self.z) == len(self.x))
+    
+    # Returns the total number of frames
+    def get_total_frames(self):
+        if not self.check_frame_equality():
+            raise GetDataException("The data for the BodyPart '" + self.name + "' don't have the same number of frames")
+
+        return len(self.x)
+    
+    # Adds the given coordinates to the BodyPart (2D or 3D)
+    def add_frame_from_coord(self, coord):
+        self.x.append(coord[0])
+        self.y.append(coord[1])
+        
+        if len(coord) > 2:
+            self.z.append(coord[2])
 
     # Print on the command line the data contained in the limb at frame frame_num
-    def print_data_at_frame(self, frame_num):
-        if len(self.z) > 0:
-            print(f"({self.x[frame_num]}, {self.y[frame_num]}, {self.z[frame_num]}) - {self.likelihood[frame_num]}")
-        else:
-            print(f"({self.x[frame_num]}, {self.y[frame_num]}) - {self.likelihood[frame_num]}")
+    def print_data_at_frame(self, frame_num:int):
+        str_to_print = "("
+
+        if len(self.x) > frame_num:
+            str_to_print += f"{self.x[frame_num]}"
+        
+        if len(self.y) > frame_num:
+            str_to_print += f", {self.y[frame_num]}"
+
+        if len(self.z) > frame_num:
+            str_to_print += f", {self.z[frame_num]}"
+        
+        str_to_print += ")"
+
+        if len(self.likelihood) > frame_num:
+            str_to_print += f" - {self.likelihood[frame_num]}"
+
+        print(str_to_print)
 
 
 
@@ -81,20 +126,47 @@ class TrackingData(OpenableDataFile):
     y_col_name = "y"
     likelihood_col_name = "likelihood"
 
-    def __init__(self, data_name):
+    def __init__(self, data_name:str):
         self.name = data_name
 
         # Create the tracking data dictionnary
-        self.data = dict()
+        self.data : dict[str, BodyPart] = dict()
+
+        self.total_frames = 0
 
 
     # Converts the data from the 2 camera views to the world frame, using world_frame
-    def get_3D_data(self, world_frame, side_tracking_data, ventral_tracking_data):
-        pass
+    def get_3D_data(self, world_frame:WorldFrame, side_tracking_data:dict[str, BodyPart], ventral_tracking_data:dict[str, BodyPart]):
+        side_frames = [bp.get_total_frames() for bp in side_tracking_data.values()]
+        ventral_frames = [bp.get_total_frames() for bp in ventral_tracking_data.values()]
+        
+        # If the side and ventral data don't have the same number of frames
+        if not all_same(side_frames + ventral_frames):
+            raise GetDataException("The dictionnaries for side and ventral tracking data don't have the same number of frames")
 
+        self.total_frames = side_frames[0]
+
+        common_keys = side_tracking_data.keys() & ventral_tracking_data.keys()
+
+        # If there is no common feature tracked
+        if len(common_keys) == 0:
+            raise GetDataException("Side and ventral tracking data have no common features")
+        
+        for body_part_name in common_keys:
+            side_bp = side_tracking_data[body_part_name]
+            ventral_bp = ventral_tracking_data[body_part_name]
+
+            self.data[body_part_name] = BodyPart(body_part_name)
+            
+            for frame in range(self.total_frames):
+                side_screen_coord = side_bp.get_2D_coord_at_frame(frame)
+                ventral_screen_coord = ventral_bp.get_2D_coord_at_frame(frame)
+                world_coord = world_frame.to_3D(side_screen_coord, ventral_screen_coord)
+                self.data[body_part_name].add_frame_from_coord(world_coord)
+        
     
     # Load the data from a CSV file (ask the user for the file if no file_path is provided)
-    def get_data_from_file(self, file_path=None, data_delimiter=',', bodypart_row_name="bodyparts", coord_row_name="coords"):
+    def get_data_from_file(self, file_path:str=None, data_delimiter:str=',', bodypart_row_name:str="bodyparts", coord_row_name:str="coords"):
         # Get the data from the file
         super().__init__(self.name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
 
@@ -143,13 +215,21 @@ class TrackingData(OpenableDataFile):
                         bodypart = all_bodyparts[i]
                         self.data[bodypart].likelihood.append(float(row[i]))
 
+        # Check that all the BodyParts have the same number of frames
+        all_frames = [bp.get_total_frames() for bp in self.data.values()]
+        if not all_same(all_frames):
+            raise GetDataException("All the BodyParts from " + self.name + " don't have the same number of frames")
+        
+        self.total_frames = all_frames[0]
+
+
     # Returns the total frame number of the tracking data
     def get_total_frames(self):
         key = next(iter(self.data))
         return len(self.data[key].x)
 
     # Returns the total time of the tracking data
-    def get_total_time(self, sampling):
+    def get_total_time(self, sampling:float):
         return self.get_total_frames() / sampling
 
     # Converting the data to the opposite origin 
@@ -162,6 +242,24 @@ class TrackingData(OpenableDataFile):
             self.data[part].x = [(x_max - x) for x in self.data[part].x]
             self.data[part].y = [(y_max - y) for y in self.data[part].y]
 
+    
+    def vizualize_frame(self, scatter_point_marker='o'):
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+
+        
+        for frames in range(self.total_frames):
+            for bp in self.data.values():
+                x,y,z = bp.get_3D_coord_at_frame(self.total_frames)
+                ax.scatter(x, y, z, marker=scatter_point_marker)
+
+        ax.set_xlabel('X Label')
+        ax.set_ylabel('Y Label')
+        ax.set_zlabel('Z Label')
+
+        ani = animation.ArtistAnimation(fig=fig, artists=artists, interval=400)
+        plt.show()
+
 
 
 # Class managing video data
@@ -173,7 +271,7 @@ class VideoData(OpenableDataFile):
     # Extensions allowed for a data file
     data_ext = [".mp4",".avi"]
 
-    def __init__(self, data_name, file_path=None):
+    def __init__(self, data_name:str, file_path:str=None):
         # Get the data from the file
         super().__init__(data_name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
 
@@ -202,7 +300,7 @@ class VideoData(OpenableDataFile):
     
     # Estimates the focal length by pointing at two marks at distance_camera_marks from the camera
     # and separated by a distance of distance_btw_marks,
-    def estimate_focal_length(self, frame_num, distance_camera_marks, world_distance_btw_marks):
+    def estimate_focal_length(self, frame_num:int, distance_camera_marks:float, world_distance_btw_marks:float):
         # Get the 2 marks' position
         pointed_coord_1 = self.point_at(frame_num, window_name="Point at the first mark")
         pointed_coord_2 = self.point_at(frame_num, window_name="Point at the second mark")
@@ -213,7 +311,7 @@ class VideoData(OpenableDataFile):
 
 
     # Setup the calibration paremeters to adjust for variations between the video and the tracked points
-    def calibrate(self, frame_num, pos_to_point_at_name, expected_coord):
+    def calibrate(self, frame_num:int, pos_to_point_at_name:str, expected_coord:tuple[int, int]):
         # Reset the calibration parameters
         self.origin_screen_x = 0
         self.origin_screen_y = 0
@@ -230,7 +328,7 @@ class VideoData(OpenableDataFile):
 
 
     # Converts the coordinates from screen space to tracking data space (ie with the same origin,... as the tracking data)
-    def to_tracking_space(self, coord):
+    def to_tracking_space(self, coord:tuple[int, int]):
         tracked_space_pointed_x = abs(coord[0] - self.origin_screen_x)
         tracked_space_pointed_y = abs(coord[1] - self.origin_screen_y)
 
@@ -240,7 +338,7 @@ class VideoData(OpenableDataFile):
     # Shows the frame frame_num of the video, in a window named window_name (if provided, otherwise auto generated)
     # And allow the user to click on a point, before returning the coordinates of the click in the screen space
     # The coordinates are returned in tracking data frame
-    def point_at(self, frame_num, window_name=None):
+    def point_at(self, frame_num:int, window_name:str=None):
         # Reset the pointed coordinates value and last key pressed
         self.pointed_coord = None
         key_pressed = None
@@ -258,7 +356,7 @@ class VideoData(OpenableDataFile):
 
     # Shows the frame frame_num of the video, in a window named img_name (if provided, otherwise auto generated name)
     # And add the callback function mouse_callback_func on mouse events (if provided)
-    def show_frame(self, frame_num, img_name=None, mouse_callback_func=None):
+    def show_frame(self, frame_num:int, img_name:str=None, mouse_callback_func=None):
         # Set the video to the required frame
         self.vidcap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
 
