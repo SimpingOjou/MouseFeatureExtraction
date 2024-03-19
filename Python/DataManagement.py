@@ -13,6 +13,7 @@ from GUI import GUI
 import os
 import csv
 import cv2
+import numpy as np
 
 from math import dist
 from WorldFrame import WorldFrame
@@ -61,6 +62,7 @@ class BodyPart:
         self.x = np.array(x_data)
         self.y = np.array(y_data)
         self.z = np.array(z_data)
+
         self.likelihood = np.array(likelihood_data)
 
     # Returns the coordinates (x,y) of the tracked body part at frame frame_num
@@ -223,7 +225,7 @@ class TrackingData(OpenableDataFile):
                             x_data[bodypart] = [float(row[i])]
                         else:
                             x_data[bodypart].append(float(row[i]))
-                    
+
                     for i in y_col:
                         bodypart = all_bodyparts[i]
                         #self.data[bodypart].y.append(float(row[i]))
@@ -266,6 +268,10 @@ class TrackingData(OpenableDataFile):
     # Returns the total time of the tracking data
     def get_total_time(self, sampling:float):
         return self.get_total_frames() / sampling
+    
+    # Returns the time divided in timesteps as an array
+    def get_timesteps(self, sampling):
+        return np.linspace(0, self.get_total_time(sampling), num = self.get_total_frames()) 
 
     # Converting the data to the opposite origin 
     # (upper-left to bottom-right, upper-right to bottom-left, ...)
@@ -274,8 +280,19 @@ class TrackingData(OpenableDataFile):
         y_max = max([max(bp.y) for bp in self.data.values()])
 
         for part in self.data:
-            self.data[part].x = [(x_max - x) for x in self.data[part].x]
-            self.data[part].y = [(y_max - y) for y in self.data[part].y]
+            self.data[part].x = x_max - self.data[part].x
+            self.data[part].y = y_max - self.data[part].y
+
+    # Cuts out the first and last steps
+    def cut_step(self, lower_t, upper_t):
+        for bodypart in self.data:
+            self.data[bodypart].x = self.data[bodypart].x[lower_t:upper_t + 1]
+            self.data[bodypart].y = self.data[bodypart].y[lower_t:upper_t + 1]
+            self.data[bodypart].likelihood = self.data[bodypart].likelihood[lower_t:upper_t + 1]
+            
+    # Cut time 
+    def cut_time(self, lower_t, upper_t, sampling):
+        return self.get_timesteps(sampling)[lower_t:upper_t + 1]
 
     
     def vizualize_frames_3D(self, xlim=[], ylim=[], zlim=[], scatter_point_marker='o'):
