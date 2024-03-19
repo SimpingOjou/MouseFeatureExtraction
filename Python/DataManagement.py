@@ -56,12 +56,12 @@ class OpenableDataFile:
 
 # Class containing the data of a body part for a single frame
 class BodyPart:
-    def __init__(self, bodypart_name:str):
+    def __init__(self, x_data, y_data, bodypart_name, likelihood_data=[], z_data=[]):
         self.name = bodypart_name
-        self.x = []
-        self.y = []
-        self.z = []
-        self.likelihood = []
+        self.x = np.array(x_data)
+        self.y = np.array(y_data)
+        self.z = np.array(z_data)
+        self.likelihood = np.array(likelihood_data)
 
     # Returns the coordinates (x,y) of the tracked body part at frame frame_num
     def get_2D_coord_at_frame(self, frame_num:int):
@@ -73,7 +73,7 @@ class BodyPart:
     
     # Returns true if the parameters have the same number of frames
     def check_frame_equality(self):
-        return len(self.x) == len(self.y) and (len(self.likelihood)==0 or len(self.likelihood) == len(self.x)) and (len(self.z) == 0 or len(self.z) == len(self.x))
+        return self.x.size == self.y.size and (self.likelihood.size==0 or self.likelihood.size == self.x.size) and (self.z.size==0 or self.z.size == self.x.size)
     
     # Returns the total number of frames
     def get_total_frames(self):
@@ -156,13 +156,22 @@ class TrackingData(OpenableDataFile):
             side_bp = side_tracking_data[body_part_name]
             ventral_bp = ventral_tracking_data[body_part_name]
 
-            self.data[body_part_name] = BodyPart(body_part_name)
+            x_coord = []
+            y_coord = []
+            z_coord = []
             
             for frame in range(self.total_frames):
                 side_screen_coord = side_bp.get_2D_coord_at_frame(frame)
                 ventral_screen_coord = ventral_bp.get_2D_coord_at_frame(frame)
+
                 world_coord = world_frame.to_3D(side_screen_coord, ventral_screen_coord)
-                self.data[body_part_name].add_frame_from_coord(world_coord)
+
+                #self.data[body_part_name].add_frame_from_coord(world_coord)
+                x_coord.append(world_coord[0])
+                y_coord.append(world_coord[1])
+                z_coord.append(world_coord[2])
+
+            self.data[body_part_name] = BodyPart(x_data=x_coord, y_data=y_coord, z_data=z_coord, bodypart_name=body_part_name)
         
     
     # Load the data from a CSV file (ask the user for the file if no file_path is provided)
@@ -180,12 +189,16 @@ class TrackingData(OpenableDataFile):
             y_col = []
             likelihood_col = []
 
+            x_data : dict[str, list] = dict()
+            y_data : dict[str, list] = dict()
+            likelihood_data : dict[str, list] = dict()
+
             # Read each row of the data file
             for row in csv_reader:
                 # If it's the bodyparts row, create the bodyparts in the data dictionnary
                 if row[0] == bodypart_row_name:
                     for bodypart in row[1:]:
-                        self.data[bodypart] = BodyPart(bodypart)
+                        #self.data[bodypart] = BodyPart(bodypart)
                         all_bodyparts.append(bodypart)
 
                 # If it's the coordinate (x,y,likelihood) column, save the indices
@@ -205,15 +218,33 @@ class TrackingData(OpenableDataFile):
                 elif row[0].isdigit():
                     for i in x_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].x.append(float(row[i]))
+                        #self.data[bodypart].x.append(float(row[i]))
+                        if not bodypart in x_data.keys():
+                            x_data[bodypart] = [float(row[i])]
+                        else:
+                            x_data[bodypart].append(float(row[i]))
                     
                     for i in y_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].y.append(float(row[i]))
+                        #self.data[bodypart].y.append(float(row[i]))
+                        if not bodypart in y_data.keys():
+                            y_data[bodypart] = [float(row[i])]
+                        else:
+                            y_data[bodypart].append(float(row[i]))
                     
                     for i in likelihood_col:
                         bodypart = all_bodyparts[i]
-                        self.data[bodypart].likelihood.append(float(row[i]))
+                        #self.data[bodypart].likelihood.append(float(row[i]))
+                        if not bodypart in likelihood_data.keys():
+                            likelihood_data[bodypart] = [float(row[i])]
+                        else:
+                            likelihood_data[bodypart].append(float(row[i]))
+
+            for bodypart in all_bodyparts[1:]:
+                # self.data[bodypart].x = np.array(self.data[bodypart].x)
+                # self.data[bodypart].y = np.array(self.data[bodypart].y)
+                # self.data[bodypart].likelihood = np.array(self.data[bodypart].likelihood)
+                self.data[bodypart] = BodyPart(x_data=x_data[bodypart], y_data=y_data[bodypart], likelihood_data=likelihood_data[bodypart], bodypart_name=bodypart)
 
         # Check that all the BodyParts have the same number of frames
         all_frames = [bp.get_total_frames() for bp in self.data.values()]
@@ -222,11 +253,15 @@ class TrackingData(OpenableDataFile):
         
         self.total_frames = all_frames[0]
 
+    def compensate_cropping(self, cropping_coord:tuple[int, int]):
+        for bp in self.data.values():
+            bp.x += cropping_coord[0]
+            bp.y += cropping_coord[1]
 
     # Returns the total frame number of the tracking data
     def get_total_frames(self):
         key = next(iter(self.data))
-        return len(self.data[key].x)
+        return self.data[key].get_total_frames()
 
     # Returns the total time of the tracking data
     def get_total_time(self, sampling:float):
@@ -243,10 +278,14 @@ class TrackingData(OpenableDataFile):
             self.data[part].y = [(y_max - y) for y in self.data[part].y]
 
     
-    def vizualize_frames(self, scatter_point_marker='o'):
+    def vizualize_frames_3D(self, xlim=[], ylim=[], zlim=[], scatter_point_marker='o'):
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
         title = ax.set_title('3D projection')
+
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_zlim(zlim)
 
         ax.set_xlabel('X Label')
         ax.set_ylabel('Y Label')
@@ -275,15 +314,19 @@ class TrackingData(OpenableDataFile):
                 data_y.append(y)
                 data_z.append(z)
             
+            ax.set_title('3D projection frame ' + str(frame))
+            
             graph.set_data(data_x, data_y)
             graph.set_3d_properties(data_z)
-            
+
             return title, graph,
 
-        ani = animation.FuncAnimation(fig=fig, func=update, frames=self.total_frames, interval=30)
+        ani = animation.FuncAnimation(fig=fig, func=update, frames=self.total_frames, interval=1/30, blit=False)
         plt.show()
 
 
+
+from Camera import CameraData
 
 # Class managing video data
 class VideoData(OpenableDataFile):
@@ -294,7 +337,7 @@ class VideoData(OpenableDataFile):
     # Extensions allowed for a data file
     data_ext = [".mp4",".avi"]
 
-    def __init__(self, pixel_size:float, data_name:str, file_path:str=None):
+    def __init__(self, camera:CameraData, data_name:str, file_path:str=None):
         # Get the data from the file
         super().__init__(data_name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
 
@@ -310,7 +353,7 @@ class VideoData(OpenableDataFile):
         # Calculate the duration of the video in seconds
         self.duration = self.frame_count / self.fps
 
-        # Coordinate pointed on an image
+        # Variable containing the coordinates pointed on an image
         self.pointed_coord = None
 
         # Default calibration value
@@ -318,8 +361,7 @@ class VideoData(OpenableDataFile):
         self.origin_screen_y = 0
 
         # Default focal length of the camera
-        self.focal_length = None
-        self.pixel_size = pixel_size
+        self.camera = camera
 
     
     # Estimates the focal length by pointing at two marks at distance_camera_marks from the camera
@@ -332,7 +374,8 @@ class VideoData(OpenableDataFile):
         screen_dist_btw_marks = dist(pointed_coord_1, pointed_coord_2)
 
         focal_length_px = distance_camera_marks * screen_dist_btw_marks / world_distance_btw_marks
-        self.focal_length = focal_length_px * self.pixel_size
+
+        return focal_length_px * self.camera.pixel_size
 
 
     # Setup the calibration paremeters to adjust for variations between the video and the tracked points
@@ -422,8 +465,8 @@ class VideoData(OpenableDataFile):
         if event == cv2.EVENT_LBUTTONDOWN: 
             img = image.copy()
 
-            print(x, ' ', y)
-            print(self.to_tracking_space((x,y))) 
+            print("Pointed position :", x, ' ', y)
+            print("In tracking space :", self.to_tracking_space((x,y))) 
 
             # Set the pointed coordinates
             self.pointed_coord = (x,y)
