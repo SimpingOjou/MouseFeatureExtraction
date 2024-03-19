@@ -4,6 +4,8 @@ import GUI as UI
 
 from time import sleep
 
+pixel_size = 4.8e-6
+
 td_sideview = Data.TrackingData(data_name="Side view tracking")
 td_ventralview = Data.TrackingData(data_name="Ventral view tracking")
 
@@ -13,8 +15,8 @@ try:
     td_ventralview.get_data_from_file(file_path="./Data/Ventralview_mouse 35_Run_1.csv")
 
     # Load the video datas
-    vid_sideview = Data.VideoData(data_name="Side view video", file_path="./Videos/Sideview_mouse 35_Run_1.mp4")
-    vid_ventral = Data.VideoData(data_name="Ventral view video", file_path="./Videos/Ventralview_mouse 35_Run_1.mp4")
+    vid_sideview = Data.VideoData(pixel_size=pixel_size, data_name="Side view video", file_path="./Videos/Sideview_mouse 35_Run_1.mp4")
+    vid_ventral = Data.VideoData(pixel_size=pixel_size, data_name="Ventral view video", file_path="./Videos/Ventralview_mouse 35_Run_1.mp4")
 except Data.DataFileException as e:
     print(e)
     exit()
@@ -29,24 +31,24 @@ frame_num = 0
 
 
 # Estimate the focal length of the cameras
-distance_side_cam_marks = 1
-distance_ventral_cam_marks = 1
+distance_side_cam_marks = 0.53
+distance_ventral_cam_marks = 0.54
 distance_btw_marks = 0.5
-# vid_sideview.estimate_focal_length(frame_num, distance_side_cam_marks, distance_btw_marks)
-# vid_ventral.estimate_focal_length(frame_num, distance_ventral_cam_marks, distance_btw_marks)
+vid_sideview.estimate_focal_length(frame_num, distance_side_cam_marks, distance_btw_marks)
+vid_ventral.estimate_focal_length(frame_num, distance_ventral_cam_marks, distance_btw_marks)
+
+print("Side focal lenght :", vid_sideview.focal_length)
+print("Ventral focal length :", vid_ventral.focal_length)
 
 
 # Get the mark's coordinate in the same frame as the tracking data
 mark_screen_coord_side = vid_sideview.point_at(frame_num, "Point at the mark on the side view camera")
 mark_screen_coord_ventral = vid_ventral.point_at(frame_num, "Point at the mark on the ventral view camera")
 
-vid_sideview.focal_length = 1
-vid_ventral.focal_length = 1
-
 # Convert from 2D to 3D
-side_ventral_cam_dist_vertical = 2
-side_cam_screen_resolution = (640, 180)
-ventral_cam_screen_resolution = (640, 180)
+side_ventral_cam_dist_vertical = 0.93
+side_cam_screen_resolution = (640, 480)
+ventral_cam_screen_resolution = (640, 480)
 wf = WF.WorldFrame(distance_side_cam_marks, distance_ventral_cam_marks, side_ventral_cam_dist_vertical, 
                    mark_screen_coord_side, mark_screen_coord_ventral, 
                    vid_sideview.focal_length, vid_ventral.focal_length, 
@@ -55,9 +57,7 @@ wf = WF.WorldFrame(distance_side_cam_marks, distance_ventral_cam_marks, side_ven
 tracking_data_3D = Data.TrackingData("3D tracking data")
 tracking_data_3D.get_3D_data(wf, td_sideview.data, td_ventralview.data)
 
-for frame in range(tracking_data_3D.total_frames):
-    tracking_data_3D.vizualize_frame(frame)
-    sleep(1)
+tracking_data_3D.vizualize_frames()
 
 # Print the x coordinate of the head at frame 200 
 print(td_sideview.data["head"].x[200])

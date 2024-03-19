@@ -243,21 +243,44 @@ class TrackingData(OpenableDataFile):
             self.data[part].y = [(y_max - y) for y in self.data[part].y]
 
     
-    def vizualize_frame(self, scatter_point_marker='o'):
+    def vizualize_frames(self, scatter_point_marker='o'):
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
-
-        
-        for frames in range(self.total_frames):
-            for bp in self.data.values():
-                x,y,z = bp.get_3D_coord_at_frame(self.total_frames)
-                ax.scatter(x, y, z, marker=scatter_point_marker)
+        title = ax.set_title('3D projection')
 
         ax.set_xlabel('X Label')
         ax.set_ylabel('Y Label')
         ax.set_zlabel('Z Label')
 
-        ani = animation.ArtistAnimation(fig=fig, artists=artists, interval=400)
+        data_x = []
+        data_y = []
+        data_z = []
+
+        for bp in self.data.values():
+            x,y,z = bp.get_3D_coord_at_frame(0)
+            data_x.append(x)
+            data_y.append(y)
+            data_z.append(z)
+            
+        graph, = ax.plot(data_x, data_y, data_z, marker=scatter_point_marker, linestyle='None')
+        
+        def update(frame):
+            data_x = []
+            data_y = []
+            data_z = []
+
+            for bp in self.data.values():
+                x,y,z = bp.get_3D_coord_at_frame(frame)
+                data_x.append(x)
+                data_y.append(y)
+                data_z.append(z)
+            
+            graph.set_data(data_x, data_y)
+            graph.set_3d_properties(data_z)
+            
+            return title, graph,
+
+        ani = animation.FuncAnimation(fig=fig, func=update, frames=self.total_frames, interval=30)
         plt.show()
 
 
@@ -271,7 +294,7 @@ class VideoData(OpenableDataFile):
     # Extensions allowed for a data file
     data_ext = [".mp4",".avi"]
 
-    def __init__(self, data_name:str, file_path:str=None):
+    def __init__(self, pixel_size:float, data_name:str, file_path:str=None):
         # Get the data from the file
         super().__init__(data_name, file_path, initial_dir=self.initial_dir, file_types=self.filetypes, data_ext=self.data_ext)
 
@@ -296,6 +319,7 @@ class VideoData(OpenableDataFile):
 
         # Default focal length of the camera
         self.focal_length = None
+        self.pixel_size = pixel_size
 
     
     # Estimates the focal length by pointing at two marks at distance_camera_marks from the camera
@@ -307,7 +331,8 @@ class VideoData(OpenableDataFile):
 
         screen_dist_btw_marks = dist(pointed_coord_1, pointed_coord_2)
 
-        self.focal_length = distance_camera_marks * screen_dist_btw_marks / world_distance_btw_marks
+        focal_length_px = distance_camera_marks * screen_dist_btw_marks / world_distance_btw_marks
+        self.focal_length = focal_length_px * self.pixel_size
 
 
     # Setup the calibration paremeters to adjust for variations between the video and the tracked points
